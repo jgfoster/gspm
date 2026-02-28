@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+.pytest_cache/
+*.pyc
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# gspm working directories
+.gspm/
+
+# IDE
+.claude/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Virtual environments
+.venv/
+venv/

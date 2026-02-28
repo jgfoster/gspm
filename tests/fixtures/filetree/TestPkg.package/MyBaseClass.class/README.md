@@ -1,0 +1,1 @@
+A simple base class for testing.

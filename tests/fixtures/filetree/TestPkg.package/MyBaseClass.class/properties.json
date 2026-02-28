@@ -1,0 +1,11 @@
+{
+    "name" : "MyBaseClass",
+    "super" : "Object",
+    "category" : "TestPkg-Core",
+    "classinstvars" : [ ],
+    "pools" : [ ],
+    "classvars" : [ "DefaultName" ],
+    "instvars" : [ "name", "value" ],
+    "type" : "normal",
+    "commentStamp" : ""
+}

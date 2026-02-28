@@ -1,0 +1,55 @@
+# Minimal Seaside web application.
+#
+# Seaside uses FileTree format (one .st file per method, nested in
+# .package/.class/ directories).  gspm transpiles FileTree packages into
+# Topaz load scripts automatically.
+#
+# What this sample demonstrates:
+#   - FileTree dependency overrides for Seaside and Grease
+#   - Tonel dependency override for Magritte
+#   - Local .gs source files
+#   - Grease loaded as a transitive dependency of Seaside
+
+[package]
+name = "seaside-hello"
+version = "0.1.0"
+description = "Minimal Seaside web application on GemStone"
+gemstone = ">=3.5"
+
+[load]
+files = [
+    "src/seaside-hello.gs",
+]
+
+[dependencies]
+# Grease — platform portability layer (required by Seaside)
+grease = { version = "^1.5", git = "https://github.com/SeasideSt/Grease", filetree = [
+    "repository/Grease-Core.package",
+    "repository/Grease-GemStone-Core.package",
+]}
+
+# Seaside — web application framework (FileTree format)
+seaside = { version = "^3.5", git = "https://github.com/SeasideSt/Seaside", filetree = [
+    "repository/Seaside-Core.package",
+    "repository/Seaside-Canvas.package",
+    "repository/Seaside-Session.package",
+    "repository/Seaside-Component.package",
+    "repository/Seaside-RenderLoop.package",
+    "repository/Seaside-Continuation.package",
+    "repository/Seaside-Flow.package",
+    "repository/Seaside-Environment.package",
+    "repository/Seaside-GemStone-Core.package",
+    "repository/Seaside-GemStone-Session.package",
+    "repository/Seaside-GemStone-Adaptors-Zinc.package",
+]}
+
+# Magritte — metadata framework (Tonel format)
+magritte = { version = "^3.7", git = "https://github.com/magritte-metamodel/Magritte", tonel = [
+    "source/Magritte-Model",
+    "source/Magritte-GemStone-Model",
+    "source/Magritte-Seaside",
+    "source/Magritte-GemStone-Seaside",
+]}
+
+[test]
+files = ["tests/seaside-hello-tests.gs"]

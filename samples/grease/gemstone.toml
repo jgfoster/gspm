@@ -1,0 +1,33 @@
+# Grease — platform portability layer for Seaside.
+#
+# Grease provides a common API across Smalltalk dialects so that
+# Seaside (and your code) can run on GemStone, Pharo, or VisualWorks
+# without modification.  It uses FileTree format.
+#
+# What this sample demonstrates:
+#   - FileTree dependency with version-specific conditional loading
+#   - A thin local layer on top of a FileTree library
+#   - Conditional load sections for different GemStone versions
+
+[package]
+name = "grease-demo"
+version = "0.1.0"
+description = "Grease portability layer demo for GemStone"
+gemstone = ">=3.5"
+
+[load]
+files = [
+    "src/grease-demo.gs",
+]
+
+[load.conditions.">=3.7"]
+files = ["src/grease-demo-37.gs"]
+
+[dependencies]
+grease = { version = "^1.5", git = "https://github.com/SeasideSt/Grease", filetree = [
+    "repository/Grease-Core.package",
+    "repository/Grease-GemStone-Core.package",
+]}
+
+[test]
+files = ["tests/grease-demo-tests.gs"]

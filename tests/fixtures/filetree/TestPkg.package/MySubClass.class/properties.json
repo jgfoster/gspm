@@ -1,0 +1,11 @@
+{
+    "name" : "MySubClass",
+    "super" : "MyBaseClass",
+    "category" : "TestPkg-Core",
+    "classinstvars" : [ ],
+    "pools" : [ ],
+    "classvars" : [ ],
+    "instvars" : [ "extra" ],
+    "type" : "normal",
+    "commentStamp" : ""
+}

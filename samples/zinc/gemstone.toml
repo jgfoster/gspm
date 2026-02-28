@@ -1,0 +1,37 @@
+# Zinc HTTP client application.
+#
+# Zinc is a modular HTTP framework for Smalltalk.  The GsDevKit fork
+# provides GemStone compatibility.  It uses FileTree format.
+#
+# What this sample demonstrates:
+#   - Multiple FileTree packages from a single dependency
+#   - Building a local HTTP helper on top of Zinc
+#   - Grease as a transitive dependency (Zinc depends on it)
+
+[package]
+name = "zinc-client"
+version = "0.1.0"
+description = "HTTP client using Zinc on GemStone"
+gemstone = ">=3.5"
+
+[load]
+files = [
+    "src/zinc-client.gs",
+]
+
+[dependencies]
+# Grease — required by Zinc for portability
+grease = { version = "^1.5", git = "https://github.com/SeasideSt/Grease", filetree = [
+    "repository/Grease-Core.package",
+    "repository/Grease-GemStone-Core.package",
+]}
+
+# Zinc HTTP — client & server framework (FileTree format)
+zinc = { version = "^3.3", git = "https://github.com/GsDevKit/zinc", filetree = [
+    "repository/Zinc-Character-Encoding-Core.package",
+    "repository/Zinc-Resource-Meta-Core.package",
+    "repository/Zinc-HTTP.package",
+]}
+
+[test]
+files = ["tests/zinc-client-tests.gs"]

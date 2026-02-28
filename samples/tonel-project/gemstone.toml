@@ -1,0 +1,32 @@
+# Project with its own source in Tonel format.
+#
+# Not all GemStone developers write raw .gs files.  If you prefer Tonel
+# (one .class.st file per class, readable diffs, standard Smalltalk
+# format), declare your packages under [load.tonel] and gspm will
+# transpile them to .tpz before loading.
+#
+# What this sample demonstrates:
+#   - Project source written in Tonel format
+#   - Tonel transpilation for local code (not just dependencies)
+#   - Mixed loading: Tonel packages + .gs test files
+#   - Magritte as a transitive Tonel dependency
+
+[package]
+name = "todo-app"
+version = "0.1.0"
+description = "A todo list app written in Tonel format"
+gemstone = ">=3.6"
+
+[load]
+tonel = [
+    "src/TodoApp",
+]
+
+[dependencies]
+magritte = { version = "^3.7", git = "https://github.com/magritte-metamodel/Magritte", tonel = [
+    "source/Magritte-Model",
+    "source/Magritte-GemStone-Model",
+]}
+
+[test]
+files = ["tests/todo-tests.gs"]

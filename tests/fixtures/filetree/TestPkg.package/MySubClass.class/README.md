@@ -1,0 +1,1 @@
+A subclass that extends MyBaseClass.

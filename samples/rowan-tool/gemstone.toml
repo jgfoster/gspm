@@ -1,0 +1,36 @@
+# A utility that extends Rowan with custom project introspection.
+#
+# Rowan is GemStone's own package manager.  Its source lives under
+# rowan/src/ in Tonel format, which gspm can transpile.  This sample
+# shows how to consume a dependency whose Tonel packages are NOT at
+# the repository root — the `tonel` paths point into the nested
+# directory structure.
+#
+# What this sample demonstrates:
+#   - Tonel dependency with a non-standard source root (rowan/src/)
+#   - Selective package loading from a large repository
+#   - Auto-discovery not needed — explicit tonel overrides used
+
+[package]
+name = "rowan-tool"
+version = "0.1.0"
+description = "Custom Rowan project introspection utilities"
+gemstone = ">=3.7"
+
+[load]
+files = [
+    "src/rowan-tool.gs",
+]
+
+[dependencies]
+rowan = { version = ">=3.7", git = "https://github.com/GemTalk/Rowan", tonel = [
+    "rowan/src/Rowan-Core",
+    "rowan/src/Rowan-Definitions",
+    "rowan/src/Rowan-Specifications",
+    "rowan/src/Rowan-GemStone-Core",
+    "rowan/src/Rowan-GemStone-Kernel",
+    "rowan/src/Rowan-Tools-Core",
+]}
+
+[test]
+files = ["tests/rowan-tool-tests.gs"]

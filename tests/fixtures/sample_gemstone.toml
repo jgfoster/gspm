@@ -1,0 +1,30 @@
+[package]
+name = "seaside"
+version = "3.5.0"
+description = "Web application framework for GemStone"
+gemstone = ">=3.5"
+authors = ["Seaside Team"]
+license = "MIT"
+repository = "https://github.com/SeasideSt/Seaside"
+
+[load]
+files = [
+    "src/core/SeasideCore.gs",
+    "src/core/SeasideSession.gs",
+    "src/rendering/SeasideRendering.gs",
+    "src/adaptors/SeasideGemStone.gs",
+]
+
+[load.conditions]
+">=3.7" = ["src/platform/Seaside37Features.gs"]
+">=3.6,<3.7" = ["src/platform/Seaside36Features.gs"]
+
+[dependencies]
+magritte = { version = "^2.0", git = "https://github.com/magritte-metamodel/magritte" }
+zinc = { version = "^1.2", git = "https://github.com/svenvc/zinc" }
+
+[dev-dependencies]
+sunit = { version = "^1.0", git = "https://github.com/example/sunit-gs" }
+
+[test]
+files = ["tests/SeasideTests.gs"]

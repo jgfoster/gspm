@@ -1,0 +1,22 @@
+# Minimal gspm project — no dependencies.
+#
+# This is the simplest possible project: local .gs files loaded into
+# a stone, with tests.
+#
+# What this sample demonstrates:
+#   - Bare-bones gemstone.toml
+#   - Multiple source files loaded in order
+#   - Test file declaration
+
+[package]
+name = "counter"
+version = "0.1.0"
+description = "A simple persistent counter"
+
+[load]
+files = [
+    "src/counter.gs",
+]
+
+[test]
+files = ["tests/counter-tests.gs"]

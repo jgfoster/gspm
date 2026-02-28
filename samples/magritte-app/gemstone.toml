@@ -1,0 +1,35 @@
+# Contact manager using Magritte meta-descriptions.
+#
+# Magritte uses Tonel format — gspm transpiles it to .tpz automatically.
+# This sample shows how to consume a real Tonel-format dependency with
+# explicit package selection via the `tonel` override.
+#
+# What this sample demonstrates:
+#   - Tonel dependency with specific packages selected
+#   - GemStone-version-conditional loading
+#   - Local .gs source files
+
+[package]
+name = "contact-manager"
+version = "0.1.0"
+description = "Contact manager using Magritte descriptions"
+gemstone = ">=3.6"
+
+[load]
+files = [
+    "src/contact-model.gs",
+    "src/contact-descriptions.gs",
+]
+
+[load.conditions]
+">=3.7" = ["src/contact-persistence-37.gs"]
+">=3.6,<3.7" = ["src/contact-persistence-36.gs"]
+
+[dependencies]
+magritte = { version = "^3.7", git = "https://github.com/magritte-metamodel/Magritte", tonel = [
+    "source/Magritte-Model",
+    "source/Magritte-GemStone-Model",
+]}
+
+[test]
+files = ["tests/contact-tests.gs"]

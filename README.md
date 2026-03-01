@@ -14,13 +14,13 @@ pull requests, diffs — without any image-side tooling.
 Requires Python 3.9+.
 
 ```bash
-pip install gspm
+pip install gemstone-gspm
 ```
 
 Or install from source:
 
 ```bash
-git clone https://github.com/GemTalk/gspm.git
+git clone https://github.com/jgfoster/gspm.git
 cd gspm
 pip install -e .
 ```
@@ -380,7 +380,7 @@ in `gspm add` or in your `gemstone.toml`.
 Global configuration lives in `~/.gspm/config.toml`:
 
 ```toml
-registry_url = "https://github.com/GemTalk/gspm-index"
+registry_url = "https://github.com/jgfoster/gspm-index"
 
 [stones.my_stone]
 user = "DataCurator"
@@ -427,13 +427,44 @@ environment — edit files, commit, push, resolve dependencies, build.
 ## Development
 
 ```bash
-git clone https://github.com/GemTalk/gspm.git
+git clone https://github.com/jgfoster/gspm.git
 cd gspm
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
 ```
+
+### Publishing to PyPI
+
+1. Install the build and upload tools:
+
+   ```bash
+   pip install build twine
+   ```
+
+2. Build the distribution:
+
+   ```bash
+   python -m build
+   ```
+
+3. Upload to [TestPyPI](https://test.pypi.org) first to verify everything looks correct:
+
+   ```bash
+   twine upload --repository testpypi dist/*
+   pip install --index-url https://test.pypi.org/simple/ gemstone-gspm
+   ```
+
+4. Upload to PyPI:
+
+   ```bash
+   twine upload dist/*
+   ```
+
+You will need a PyPI account and an
+[API token](https://pypi.org/help/#apitoken) configured in `~/.pypirc` or
+passed via `--username __token__ --password <token>`.
 
 ## License
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.1 — 2026-02-28
+
+### Changed
+
+- Renamed PyPI package from `gspm` to `gemstone-gspm` to avoid conflict with
+  an existing package. The CLI command remains `gspm`.
+- Repository URL updated to `https://github.com/jgfoster/gspm`.
+- Added `[project.urls]` (Homepage, Repository, Issues) to `pyproject.toml`.
+
+### Documentation
+
+- Added PyPI publishing instructions to README.
+
 ## 0.1.0 — 2026-02-28
 
 Initial release.

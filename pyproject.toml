@@ -3,7 +3,7 @@ requires = ["setuptools>=64.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "gspm"
+name = "gemstone-gspm"
 version = "0.1.0"
 description = "GemStone Package Manager — a Cargo-inspired tool for GemStone/S"
 readme = "README.md"
@@ -12,12 +12,16 @@ requires-python = ">=3.9"
 authors = [
     { name = "James Foster" }
 ]
-
 dependencies = [
     "click>=8.0",
     "tomlkit>=0.12",
     "packaging>=23.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/jgfoster/gspm"
+Repository = "https://github.com/jgfoster/gspm"
+Issues = "https://github.com/jgfoster/gspm/issues"
 
 [project.optional-dependencies]
 dev = [

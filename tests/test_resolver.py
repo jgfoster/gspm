@@ -1,12 +1,12 @@
-"""Tests for gspm.resolver module."""
+"""Tests for geode.resolver module."""
 
 import pytest
 from typing import Dict, List, Tuple
 
 from packaging.version import Version
 
-from gspm.errors import ResolverError
-from gspm.models import (
+from geode.errors import ResolverError
+from geode.models import (
     ConditionalDeps,
     Dependency,
     Manifest,
@@ -14,7 +14,7 @@ from gspm.models import (
     LoadSpec,
     SuiteSpec,
 )
-from gspm.resolver import Resolver, tag_to_version
+from geode.resolver import Resolver, tag_to_version
 
 
 class MockPackageSource:

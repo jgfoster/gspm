@@ -2,7 +2,7 @@
 #
 # Not all GemStone developers write raw .gs files.  If you prefer Tonel
 # (one .class.st file per class, readable diffs, standard Smalltalk
-# format), declare your packages under [load.tonel] and gspm will
+# format), declare your packages under [load.tonel] and Geode will
 # transpile them to .tpz before loading.
 #
 # What this sample demonstrates:

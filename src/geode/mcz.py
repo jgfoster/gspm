@@ -1,7 +1,7 @@
 """Migration shim for Monticello (.mcz) packages.
 
 Extracts a .mcz archive, locates ``snapshot/source.st`` (Smalltalk chunk
-format), and produces a gspm package directory with a ``gemstone.toml``
+format), and produces a geode package directory with a ``gemstone.toml``
 and the source as a ``.gs`` file. Topaz can ``input`` chunk-format files
 directly, so chunk-level parsing is not required for the round-trip;
 this module performs only minimal cleanup of Monticello-specific
@@ -17,7 +17,7 @@ import zipfile
 from pathlib import Path
 from typing import Optional, Tuple
 
-from gspm.errors import MczError
+from geode.errors import MczError
 
 
 # Strip Monticello stamp metadata that Topaz `input` does not recognize:
@@ -29,7 +29,7 @@ _PACKAGE_NAME_RE = re.compile(r"name\s+'([^']+)'")
 
 
 def migrate_mcz(mcz_path: Path, out_dir: Path) -> Path:
-    """Convert a .mcz archive into a gspm package at ``out_dir``.
+    """Convert a .mcz archive into a geode package at ``out_dir``.
 
     Returns the path to the generated ``gemstone.toml``.
     """

@@ -1,9 +1,9 @@
-"""Tests for gspm.manifest module."""
+"""Tests for geode.manifest module."""
 
 import pytest
 from pathlib import Path
 
-from gspm.manifest import (
+from geode.manifest import (
     evaluate_conditional_dependencies,
     expand_constraint,
     load_manifest,
@@ -11,8 +11,8 @@ from gspm.manifest import (
     add_dependency,
     scaffold_manifest,
 )
-from gspm.errors import ManifestError
-from gspm.models import (
+from geode.errors import ManifestError
+from geode.models import (
     ConditionalDeps,
     Dependency,
     Manifest,
@@ -126,7 +126,7 @@ class TestSaveManifest:
         assert set(m2.dependencies.keys()) == set(m.dependencies.keys())
 
     def test_round_trip_with_dep_overrides(self, tmp_path):
-        from gspm.models import Manifest, PackageMetadata, Dependency
+        from geode.models import Manifest, PackageMetadata, Dependency
 
         m = Manifest(
             package=PackageMetadata(name="test", version="1.0.0"),
@@ -153,7 +153,7 @@ class TestSaveManifest:
         assert m2.dependencies["zinc"].files == ["src/ZnCore.gs"]
 
     def test_round_trip_with_filetree_override(self, tmp_path):
-        from gspm.models import Manifest, PackageMetadata, Dependency
+        from geode.models import Manifest, PackageMetadata, Dependency
 
         m = Manifest(
             package=PackageMetadata(name="test", version="1.0.0"),

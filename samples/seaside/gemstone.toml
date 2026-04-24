@@ -1,7 +1,7 @@
 # Minimal Seaside web application.
 #
 # Seaside uses FileTree format (one .st file per method, nested in
-# .package/.class/ directories).  gspm transpiles FileTree packages into
+# .package/.class/ directories).  Geode transpiles FileTree packages into
 # Topaz load scripts automatically.
 #
 # What this sample demonstrates:

@@ -1,6 +1,6 @@
 # Contact manager using Magritte meta-descriptions.
 #
-# Magritte uses Tonel format — gspm transpiles it to .tpz automatically.
+# Magritte uses Tonel format — Geode transpiles it to .tpz automatically.
 # This sample shows how to consume a real Tonel-format dependency with
 # explicit package selection via the `tonel` override.
 #

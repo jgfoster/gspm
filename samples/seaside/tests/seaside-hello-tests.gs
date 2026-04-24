@@ -21,5 +21,5 @@ method: HelloAppTest
 testRendersGreeting
     | html |
     html := HelloApp new renderContentOn: (WAHtmlCanvas new).
-    self assert: (html includesSubString: 'Hello from gspm!')
+    self assert: (html includesSubString: 'Hello from Geode!')
 %

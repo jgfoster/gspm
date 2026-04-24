@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
-from gspm.errors import TonelError
+from geode.errors import TonelError
 
 
 _CLASS_NAME_RE = re.compile(r"\b([A-Z][A-Za-z0-9_]*)\b")

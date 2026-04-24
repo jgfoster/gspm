@@ -1,20 +1,20 @@
-"""Manage .gspm/cache and .gspm/deps directories."""
+"""Manage .geode/cache and .geode/deps directories."""
 
 import shutil
 from pathlib import Path
 
-from gspm.errors import CacheError
-from gspm.models import Lockfile
+from geode.errors import CacheError
+from geode.models import Lockfile
 
-GSPM_DIR = ".gspm"
-CACHE_DIR = ".gspm/cache"
-DEPS_DIR = ".gspm/deps"
-BARE_DIR = ".gspm/bare"
-TONEL_DIR = ".gspm/tonel"
+GEODE_DIR = ".geode"
+CACHE_DIR = ".geode/cache"
+DEPS_DIR = ".geode/deps"
+BARE_DIR = ".geode/bare"
+TONEL_DIR = ".geode/tonel"
 
 
 def ensure_dirs(project_root: Path) -> None:
-    """Create .gspm directories if they don't exist."""
+    """Create .geode directories if they don't exist."""
     for subdir in (CACHE_DIR, DEPS_DIR, BARE_DIR, TONEL_DIR):
         (project_root / subdir).mkdir(parents=True, exist_ok=True)
 
@@ -40,7 +40,7 @@ def cache_path(project_root: Path, sha: str) -> Path:
 
 
 def populate_deps(project_root: Path, lockfile: Lockfile) -> None:
-    """Populate .gspm/deps/ from cache based on lockfile."""
+    """Populate .geode/deps/ from cache based on lockfile."""
     deps_dir = project_root / DEPS_DIR
 
     # Clean existing deps
@@ -52,7 +52,7 @@ def populate_deps(project_root: Path, lockfile: Lockfile) -> None:
         src = project_root / CACHE_DIR / pkg.sha
         if not src.is_dir():
             raise CacheError(
-                f"Cache missing for {pkg.name} ({pkg.sha}). Run 'gspm fetch' first."
+                f"Cache missing for {pkg.name} ({pkg.sha}). Run 'geode fetch' first."
             )
         dest = deps_dir / pkg.name
         # Copy from cache to deps
@@ -65,14 +65,14 @@ def get_dep_path(project_root: Path, name: str) -> Path:
 
 
 def clean_deps(project_root: Path) -> None:
-    """Remove .gspm/deps/."""
+    """Remove .geode/deps/."""
     deps_dir = project_root / DEPS_DIR
     if deps_dir.exists():
         shutil.rmtree(deps_dir)
 
 
 def clean_all(project_root: Path) -> None:
-    """Remove entire .gspm/ directory."""
-    gspm_dir = project_root / GSPM_DIR
-    if gspm_dir.exists():
-        shutil.rmtree(gspm_dir)
+    """Remove entire .geode/ directory."""
+    geode_dir = project_root / GEODE_DIR
+    if geode_dir.exists():
+        shutil.rmtree(geode_dir)

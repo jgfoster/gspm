@@ -1,10 +1,10 @@
-"""Git subprocess wrapper for gspm."""
+"""Git subprocess wrapper for Geode."""
 
 import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from gspm.errors import GitError
+from geode.errors import GitError
 
 
 def clone_bare(url: str, dest: Path) -> None:

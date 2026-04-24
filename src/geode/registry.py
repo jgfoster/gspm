@@ -1,4 +1,4 @@
-"""Lightweight GitHub-based package registry for gspm.
+"""Lightweight GitHub-based package registry for Geode.
 
 The registry is a git repository containing an index.json file that maps
 package names to their git URLs and published versions.
@@ -9,10 +9,10 @@ import subprocess
 from pathlib import Path
 from typing import Dict, Optional
 
-from gspm.config import DEFAULT_REGISTRY, GLOBAL_CONFIG_DIR
-from gspm.errors import RegistryError
-from gspm.models import Dependency, Manifest, RegistryEntry
-from gspm import git as git_ops
+from geode.config import DEFAULT_REGISTRY, GLOBAL_CONFIG_DIR
+from geode.errors import RegistryError
+from geode.models import Dependency, Manifest, RegistryEntry
+from geode import git as git_ops
 
 REGISTRY_CACHE_DIR = GLOBAL_CONFIG_DIR / "registry"
 INDEX_FILE = "index.json"
@@ -21,7 +21,7 @@ INDEX_FILE = "index.json"
 def fetch_index(registry_url: str = DEFAULT_REGISTRY) -> Dict[str, RegistryEntry]:
     """Fetch and parse the registry index.
 
-    Clones or updates the registry repo in ~/.gspm/registry/ and
+    Clones or updates the registry repo in ~/.geode/registry/ and
     reads index.json. Returns a dict of package_name -> RegistryEntry.
     """
     _ensure_registry_clone(registry_url)
@@ -176,7 +176,7 @@ def publish_package(
             [
                 "gh", "pr", "create",
                 "--title", f"Publish {name} {version}",
-                "--body", f"Add {name} {version} to the gspm registry.\n\n"
+                "--body", f"Add {name} {version} to the Geode registry.\n\n"
                           f"Repository: {repo_url}\n"
                           f"Description: {manifest.package.description}",
             ],

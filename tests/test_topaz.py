@@ -1,8 +1,8 @@
-"""Tests for gspm.topaz module."""
+"""Tests for geode.topaz module."""
 
 import pytest
 
-from gspm.models import (
+from geode.models import (
     Dependency,
     Lockfile,
     Manifest,
@@ -11,8 +11,8 @@ from gspm.models import (
     ResolvedPackage,
     SuiteSpec,
 )
-from gspm.topaz import topological_sort, evaluate_conditions, generate_install_script
-from gspm.errors import TopazError
+from geode.topaz import topological_sort, evaluate_conditions, generate_install_script
+from geode.errors import TopazError
 
 
 class TestTopologicalSort:
@@ -134,7 +134,7 @@ class TestGenerateInstallScript:
             lockfile=Lockfile(),
             stone_name="mystone",
         )
-        assert "gspm" in script
+        assert "Geode" in script
         assert "myapp 1.0.0" in script
 
     def test_custom_credentials(self, tmp_path):
@@ -170,7 +170,7 @@ class TestGenerateInstallScript:
     def test_dep_with_files_override(self, tmp_path):
         """Dependency without manifest but with files override."""
         # Set up a fake dependency with .gs files (no gemstone.toml)
-        dep_dir = tmp_path / ".gspm" / "deps" / "zinc"
+        dep_dir = tmp_path / ".geode" / "deps" / "zinc"
         dep_dir.mkdir(parents=True)
         (dep_dir / "src").mkdir()
         (dep_dir / "src" / "ZnCore.gs").write_text("! ZnCore")
@@ -199,7 +199,7 @@ class TestGenerateInstallScript:
     def test_dep_with_tonel_override(self, tmp_path):
         """Dependency without manifest but with tonel override."""
         # Set up a fake dependency with .st files (no gemstone.toml)
-        dep_dir = tmp_path / ".gspm" / "deps" / "seaside"
+        dep_dir = tmp_path / ".geode" / "deps" / "seaside"
         pkg_dir = dep_dir / "src" / "Seaside-Core"
         pkg_dir.mkdir(parents=True)
         (pkg_dir / "SeasideApp.st").write_text(
@@ -214,7 +214,7 @@ class TestGenerateInstallScript:
             "}\n"
         )
         # Ensure tonel output dir exists
-        (tmp_path / ".gspm" / "tonel").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".geode" / "tonel").mkdir(parents=True, exist_ok=True)
 
         manifest = Manifest(
             package=PackageMetadata(name="myapp", version="1.0.0"),
@@ -241,7 +241,7 @@ class TestGenerateInstallScript:
 
     def test_dep_auto_discover_tonel(self, tmp_path):
         """Dependency with no manifest and no overrides — auto-discovers .st files."""
-        dep_dir = tmp_path / ".gspm" / "deps" / "legacy"
+        dep_dir = tmp_path / ".geode" / "deps" / "legacy"
         pkg_dir = dep_dir / "SomePackage"
         pkg_dir.mkdir(parents=True)
         (pkg_dir / "MyClass.st").write_text(
@@ -255,7 +255,7 @@ class TestGenerateInstallScript:
             "    #category : #'Test'\n"
             "}\n"
         )
-        (tmp_path / ".gspm" / "tonel").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".geode" / "tonel").mkdir(parents=True, exist_ok=True)
 
         manifest = Manifest(
             package=PackageMetadata(name="myapp", version="1.0.0"),
@@ -279,7 +279,7 @@ class TestGenerateInstallScript:
 
     def test_dep_auto_discover_gs_fallback(self, tmp_path):
         """Auto-discovery falls back to .gs files when no .st files found."""
-        dep_dir = tmp_path / ".gspm" / "deps" / "oldpkg"
+        dep_dir = tmp_path / ".geode" / "deps" / "oldpkg"
         (dep_dir / "src").mkdir(parents=True)
         (dep_dir / "src" / "OldCode.gs").write_text("! old code")
 
@@ -305,7 +305,7 @@ class TestGenerateInstallScript:
 
     def test_dep_auto_discover_nested_tonel(self, tmp_path):
         """Auto-discovery finds .st files in nested directories (e.g., src/PkgName/)."""
-        dep_dir = tmp_path / ".gspm" / "deps" / "rowan_style"
+        dep_dir = tmp_path / ".geode" / "deps" / "rowan_style"
         pkg_dir = dep_dir / "src" / "RowanPkg"
         pkg_dir.mkdir(parents=True)
         (pkg_dir / "RowanClass.st").write_text(
@@ -319,7 +319,7 @@ class TestGenerateInstallScript:
             "    #category : #'Test'\n"
             "}\n"
         )
-        (tmp_path / ".gspm" / "tonel").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".geode" / "tonel").mkdir(parents=True, exist_ok=True)
 
         manifest = Manifest(
             package=PackageMetadata(name="myapp", version="1.0.0"),
@@ -344,7 +344,7 @@ class TestGenerateInstallScript:
 
     def test_dep_auto_discover_skips_test_dirs(self, tmp_path):
         """Auto-discovery skips test directories."""
-        dep_dir = tmp_path / ".gspm" / "deps" / "withtest"
+        dep_dir = tmp_path / ".geode" / "deps" / "withtest"
         # Production package
         prod_dir = dep_dir / "Seaside-Core"
         prod_dir.mkdir(parents=True)
@@ -373,7 +373,7 @@ class TestGenerateInstallScript:
             "    #category : #'Seaside-Tests'\n"
             "}\n"
         )
-        (tmp_path / ".gspm" / "tonel").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".geode" / "tonel").mkdir(parents=True, exist_ok=True)
 
         manifest = Manifest(
             package=PackageMetadata(name="myapp", version="1.0.0"),
@@ -399,7 +399,7 @@ class TestGenerateInstallScript:
 
     def test_dep_auto_discover_gs_recursive(self, tmp_path):
         """Auto-discovery finds .gs files recursively, not just in src/."""
-        dep_dir = tmp_path / ".gspm" / "deps" / "deepgs"
+        dep_dir = tmp_path / ".geode" / "deps" / "deepgs"
         (dep_dir / "lib" / "core").mkdir(parents=True)
         (dep_dir / "lib" / "core" / "Deep.gs").write_text("! deep code")
 
@@ -426,7 +426,7 @@ class TestGenerateInstallScript:
 
     def test_dep_auto_discover_gs_skips_test_dirs(self, tmp_path):
         """Auto-discovery of .gs files skips test directories."""
-        dep_dir = tmp_path / ".gspm" / "deps" / "gstest"
+        dep_dir = tmp_path / ".geode" / "deps" / "gstest"
         (dep_dir / "src").mkdir(parents=True)
         (dep_dir / "src" / "Prod.gs").write_text("! production")
         (dep_dir / "tests").mkdir(parents=True)
@@ -456,7 +456,7 @@ class TestGenerateInstallScript:
 
     def test_dep_with_filetree_override(self, tmp_path):
         """Dependency without manifest but with filetree override."""
-        dep_dir = tmp_path / ".gspm" / "deps" / "grease"
+        dep_dir = tmp_path / ".geode" / "deps" / "grease"
         pkg_dir = dep_dir / "repository" / "Grease-Core.package"
         cls_dir = pkg_dir / "GRObject.class"
         cls_dir.mkdir(parents=True)
@@ -468,7 +468,7 @@ class TestGenerateInstallScript:
         inst_dir = cls_dir / "instance"
         inst_dir.mkdir()
         (inst_dir / "greaseString.st").write_text("printing\ngreaseString\n\t^ self printString")
-        (tmp_path / ".gspm" / "tonel").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".geode" / "tonel").mkdir(parents=True, exist_ok=True)
 
         manifest = Manifest(
             package=PackageMetadata(name="myapp", version="1.0.0"),
@@ -495,7 +495,7 @@ class TestGenerateInstallScript:
 
     def test_dep_auto_discover_filetree(self, tmp_path):
         """Auto-discovery finds .package/ directories."""
-        dep_dir = tmp_path / ".gspm" / "deps" / "oldlib"
+        dep_dir = tmp_path / ".geode" / "deps" / "oldlib"
         pkg_dir = dep_dir / "repository" / "OldLib-Core.package"
         cls_dir = pkg_dir / "OldClass.class"
         cls_dir.mkdir(parents=True)
@@ -507,7 +507,7 @@ class TestGenerateInstallScript:
         inst_dir = cls_dir / "instance"
         inst_dir.mkdir()
         (inst_dir / "run.st").write_text("actions\nrun\n\t^ 42")
-        (tmp_path / ".gspm" / "tonel").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".geode" / "tonel").mkdir(parents=True, exist_ok=True)
 
         manifest = Manifest(
             package=PackageMetadata(name="myapp", version="1.0.0"),
@@ -532,7 +532,7 @@ class TestGenerateInstallScript:
 
     def test_use_tfile_emits_tfile_directives(self, tmp_path):
         """With use_tfile=True and no forward refs, emit TFILE per .st file."""
-        dep_dir = tmp_path / ".gspm" / "deps" / "tfilepkg"
+        dep_dir = tmp_path / ".geode" / "deps" / "tfilepkg"
         pkg_dir = dep_dir / "src" / "Pkg"
         pkg_dir.mkdir(parents=True)
         (pkg_dir / "OneClass.st").write_text(
@@ -573,7 +573,7 @@ class TestGenerateInstallScript:
 
     def test_use_tfile_falls_back_when_forward_refs(self, tmp_path):
         """With use_tfile=True but forward refs present, transpile instead."""
-        dep_dir = tmp_path / ".gspm" / "deps" / "cyclic"
+        dep_dir = tmp_path / ".geode" / "deps" / "cyclic"
         pkg_dir = dep_dir / "src" / "Cycle"
         pkg_dir.mkdir(parents=True)
         # Alpha references Beta; Alpha loads first (alphabetical) → forward ref
@@ -602,7 +602,7 @@ class TestGenerateInstallScript:
             "    #category : #'Cycle'\n"
             "}\n"
         )
-        (tmp_path / ".gspm" / "tonel").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".geode" / "tonel").mkdir(parents=True, exist_ok=True)
 
         manifest = Manifest(
             package=PackageMetadata(name="myapp", version="1.0.0"),
@@ -632,7 +632,7 @@ class TestGenerateInstallScript:
 
     def test_use_tfile_default_is_transpile(self, tmp_path):
         """Without --tfile (default), behavior is unchanged: transpile."""
-        dep_dir = tmp_path / ".gspm" / "deps" / "regular"
+        dep_dir = tmp_path / ".geode" / "deps" / "regular"
         pkg_dir = dep_dir / "src" / "Pkg"
         pkg_dir.mkdir(parents=True)
         (pkg_dir / "OneClass.st").write_text(
@@ -672,7 +672,7 @@ class TestGenerateInstallScript:
 
     def test_dep_auto_discover_skips_filetree_test_packages(self, tmp_path):
         """Auto-discovery skips .package dirs with test names."""
-        dep_dir = tmp_path / ".gspm" / "deps" / "withft"
+        dep_dir = tmp_path / ".geode" / "deps" / "withft"
         # Production package
         prod_pkg = dep_dir / "repository" / "Core.package"
         cls_dir = prod_pkg / "CoreClass.class"
@@ -697,7 +697,7 @@ class TestGenerateInstallScript:
         tinst_dir = tcls_dir / "instance"
         tinst_dir.mkdir()
         (tinst_dir / "testRun.st").write_text("tests\ntestRun\n\tself assert: true")
-        (tmp_path / ".gspm" / "tonel").mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".geode" / "tonel").mkdir(parents=True, exist_ok=True)
 
         manifest = Manifest(
             package=PackageMetadata(name="myapp", version="1.0.0"),

@@ -1,4 +1,4 @@
-"""Shared test fixtures for gspm."""
+"""Shared test fixtures for geode."""
 
 from pathlib import Path
 
@@ -25,7 +25,7 @@ def sample_lockfile_path(fixtures_dir):
 @pytest.fixture
 def tmp_project(tmp_path):
     """Create a temporary project directory with a skeleton manifest."""
-    from gspm.manifest import scaffold_manifest
+    from geode.manifest import scaffold_manifest
 
     project = tmp_path / "testproject"
     project.mkdir()

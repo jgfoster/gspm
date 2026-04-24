@@ -1,49 +1,49 @@
-"""gspm exception hierarchy."""
+"""geode exception hierarchy."""
 
 
-class GspmError(Exception):
-    """Base exception for all gspm errors."""
+class GeodeError(Exception):
+    """Base exception for all geode errors."""
 
 
-class ManifestError(GspmError):
+class ManifestError(GeodeError):
     """Error parsing or validating gemstone.toml."""
 
 
-class LockfileError(GspmError):
+class LockfileError(GeodeError):
     """Error parsing or validating gemstone.lock."""
 
 
-class ResolverError(GspmError):
+class ResolverError(GeodeError):
     """Dependency resolution failed."""
 
 
-class GitError(GspmError):
+class GitError(GeodeError):
     """A git subprocess operation failed."""
 
 
-class CacheError(GspmError):
-    """Error managing .gspm/cache or .gspm/deps."""
+class CacheError(GeodeError):
+    """Error managing .geode/cache or .geode/deps."""
 
 
-class RegistryError(GspmError):
+class RegistryError(GeodeError):
     """Error communicating with the package registry."""
 
 
-class TopazError(GspmError):
+class TopazError(GeodeError):
     """Error generating or running a Topaz script."""
 
 
-class ConfigError(GspmError):
+class ConfigError(GeodeError):
     """Error in user/project configuration."""
 
 
-class TonelError(GspmError):
+class TonelError(GeodeError):
     """Error parsing a Tonel .st file."""
 
 
-class FileTreeError(GspmError):
+class FileTreeError(GeodeError):
     """Error parsing a FileTree .package directory."""
 
 
-class MczError(GspmError):
+class MczError(GeodeError):
     """Error reading or migrating a Monticello .mcz archive."""

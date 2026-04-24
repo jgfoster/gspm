@@ -1,4 +1,4 @@
-"""Dependency version resolution for gspm.
+"""Dependency version resolution for geode.
 
 Implements a recursive resolver with backtracking. For each dependency,
 the highest compatible version is tried first. If transitive dependencies
@@ -14,9 +14,9 @@ import tomlkit
 from packaging.specifiers import SpecifierSet
 from packaging.version import InvalidVersion, Version
 
-from gspm.errors import ResolverError
-from gspm.models import Dependency, Lockfile, Manifest, ResolvedPackage
-from gspm.manifest import evaluate_conditional_dependencies, expand_constraint
+from geode.errors import ResolverError
+from geode.models import Dependency, Lockfile, Manifest, ResolvedPackage
+from geode.manifest import evaluate_conditional_dependencies, expand_constraint
 
 
 class PackageSource:
@@ -29,7 +29,7 @@ class PackageSource:
     def __init__(self, project_root: Path) -> None:
         self._project_root = project_root
         # Lazy import to avoid circular dependency
-        from gspm import cache, git
+        from geode import cache, git
 
         self._git = git
         self._cache = cache

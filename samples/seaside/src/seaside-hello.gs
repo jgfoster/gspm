@@ -17,14 +17,14 @@ category: 'initialization'
 method: HelloApp
 initialize
     super initialize.
-    greeting := 'Hello from gspm!'
+    greeting := 'Hello from Geode!'
 %
 
 category: 'rendering'
 method: HelloApp
 renderContentOn: html
     html heading: greeting.
-    html paragraph: 'This app was loaded by gspm.'
+    html paragraph: 'This app was loaded by Geode.'
 %
 
 category: 'registration'
@@ -36,7 +36,7 @@ canBeRoot
 category: 'registration'
 classmethod: HelloApp
 description
-    ^ 'Hello World (gspm)'
+    ^ 'Hello World (Geode)'
 %
 
 doit

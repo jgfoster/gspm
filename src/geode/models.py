@@ -1,4 +1,4 @@
-"""Core data models for gspm."""
+"""Core data models for Geode."""
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional

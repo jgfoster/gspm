@@ -1,9 +1,9 @@
-"""Tests for gspm.tonel module — Tonel parser and Topaz generator."""
+"""Tests for geode.tonel module — Tonel parser and Topaz generator."""
 
 import pytest
 from pathlib import Path
 
-from gspm.tonel import (
+from geode.tonel import (
     parse_tonel,
     generate_tpz,
     generate_combined_tpz,
@@ -14,7 +14,7 @@ from gspm.tonel import (
     transpile_directory,
     _parse_ston,
 )
-from gspm.errors import TonelError
+from geode.errors import TonelError
 
 
 TONEL_FIXTURES = Path(__file__).parent / "fixtures" / "tonel"
@@ -453,7 +453,7 @@ class TestHasForwardClassRefs:
 
 class TestManifestTonel:
     def test_load_spec_with_tonel(self):
-        from gspm.models import LoadSpec
+        from geode.models import LoadSpec
         load = LoadSpec(
             files=["src/bootstrap.gs"],
             tonel=["src/MyPackage"],
@@ -461,8 +461,8 @@ class TestManifestTonel:
         assert load.tonel == ["src/MyPackage"]
 
     def test_manifest_round_trip_with_tonel(self, tmp_path):
-        from gspm.manifest import load_manifest, save_manifest
-        from gspm.models import (
+        from geode.manifest import load_manifest, save_manifest
+        from geode.models import (
             Manifest, PackageMetadata, LoadSpec,
         )
 

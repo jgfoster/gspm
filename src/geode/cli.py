@@ -1,4 +1,4 @@
-"""gspm CLI — GemStone Package Manager."""
+"""geode CLI — GemStone Package Manager."""
 
 import sys
 from pathlib import Path
@@ -6,8 +6,8 @@ from typing import Optional
 
 import click
 
-from gspm import __version__
-from gspm.errors import GspmError
+from geode import __version__
+from geode.errors import GeodeError
 
 
 def _detect_platform() -> str:
@@ -22,13 +22,13 @@ def _detect_platform() -> str:
 
 
 @click.group()
-@click.version_option(version=__version__, prog_name="gspm")
+@click.version_option(version=__version__, prog_name="geode")
 def main() -> None:
     """GemStone Package Manager — manage GemStone/S packages with Git."""
 
 
 # ---------------------------------------------------------------------------
-# gspm init
+# geode init
 # ---------------------------------------------------------------------------
 
 
@@ -36,7 +36,7 @@ def main() -> None:
 @click.argument("name", required=False)
 def init(name: Optional[str]) -> None:
     """Create a new project with a skeleton gemstone.toml."""
-    from gspm.manifest import scaffold_manifest
+    from geode.manifest import scaffold_manifest
 
     if name:
         project_dir = Path.cwd() / name
@@ -61,14 +61,14 @@ def init(name: Optional[str]) -> None:
     # Write .gitignore if it doesn't exist
     gitignore = project_dir / ".gitignore"
     if not gitignore.exists():
-        gitignore.write_text("# gspm working directories\n.gspm/\n")
+        gitignore.write_text("# geode working directories\n.geode/\n")
 
-    click.secho(f"Created new gspm project: {name}", fg="green")
+    click.secho(f"Created new geode project: {name}", fg="green")
     click.echo(f"  {manifest_path}")
 
 
 # ---------------------------------------------------------------------------
-# gspm add
+# geode add
 # ---------------------------------------------------------------------------
 
 
@@ -90,20 +90,20 @@ def add(
     filetree: tuple,
 ) -> None:
     """Add a dependency to gemstone.toml."""
-    from gspm.manifest import add_dependency
-    from gspm.registry import resolve_git_url
-    from gspm.models import Dependency
+    from geode.manifest import add_dependency
+    from geode.registry import resolve_git_url
+    from geode.models import Dependency
 
     manifest_path = Path.cwd() / "gemstone.toml"
     if not manifest_path.exists():
-        _error("No gemstone.toml found. Run 'gspm init' first.")
+        _error("No gemstone.toml found. Run 'geode init' first.")
 
     # Resolve git URL from registry if not provided
     if not git_url:
         try:
             dep = Dependency(name=package, version=version_spec)
             git_url = resolve_git_url(package, dep)
-        except GspmError:
+        except GeodeError:
             _error(
                 f"Package '{package}' not found in registry. "
                 f"Specify a git URL with --git."
@@ -120,7 +120,7 @@ def add(
             tonel=list(tonel) if tonel else None,
             filetree=list(filetree) if filetree else None,
         )
-    except GspmError as e:
+    except GeodeError as e:
         _error(str(e))
 
     section = "dev-dependencies" if dev else "dependencies"
@@ -128,7 +128,7 @@ def add(
 
 
 # ---------------------------------------------------------------------------
-# gspm fetch
+# geode fetch
 # ---------------------------------------------------------------------------
 
 
@@ -137,20 +137,20 @@ def add(
               help="GemStone version to activate gemstone-conditional dependencies")
 def fetch(gs_version: Optional[str]) -> None:
     """Resolve all dependencies and update gemstone.lock."""
-    from gspm.manifest import load_manifest
-    from gspm.lockfile import save_lockfile
-    from gspm.resolver import PackageSource, Resolver
-    from gspm import cache
-    from gspm import git as git_ops
+    from geode.manifest import load_manifest
+    from geode.lockfile import save_lockfile
+    from geode.resolver import PackageSource, Resolver
+    from geode import cache
+    from geode import git as git_ops
 
     project_root = Path.cwd()
     manifest_path = project_root / "gemstone.toml"
     if not manifest_path.exists():
-        _error("No gemstone.toml found. Run 'gspm init' first.")
+        _error("No gemstone.toml found. Run 'geode init' first.")
 
     try:
         manifest = load_manifest(manifest_path)
-    except GspmError as e:
+    except GeodeError as e:
         _error(str(e))
 
     has_any_deps = (
@@ -172,7 +172,7 @@ def fetch(gs_version: Optional[str]) -> None:
             gemstone_version=gs_version,
             platform=_detect_platform(),
         )
-    except GspmError as e:
+    except GeodeError as e:
         _error(str(e))
 
     # Save lockfile
@@ -204,7 +204,7 @@ def fetch(gs_version: Optional[str]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# gspm install
+# geode install
 # ---------------------------------------------------------------------------
 
 
@@ -227,10 +227,10 @@ def install(
     use_tfile: bool,
 ) -> None:
     """Generate and run a Topaz script to load code into STONE."""
-    from gspm.manifest import load_manifest
-    from gspm.lockfile import load_lockfile
-    from gspm.config import get_stone_config
-    from gspm.topaz import generate_install_script, run_topaz
+    from geode.manifest import load_manifest
+    from geode.lockfile import load_lockfile
+    from geode.config import get_stone_config
+    from geode.topaz import generate_install_script, run_topaz
 
     project_root = Path.cwd()
     manifest, lockfile = _load_project(project_root)
@@ -256,12 +256,12 @@ def install(
         output = run_topaz(script, project_root)
         click.echo(output)
         click.secho("Install complete.", fg="green")
-    except GspmError as e:
+    except GeodeError as e:
         _error(str(e))
 
 
 # ---------------------------------------------------------------------------
-# gspm test
+# geode test
 # ---------------------------------------------------------------------------
 
 
@@ -282,10 +282,10 @@ def test(
     use_tfile: bool,
 ) -> None:
     """Load code including dev-dependencies and run tests in STONE."""
-    from gspm.manifest import load_manifest
-    from gspm.lockfile import load_lockfile
-    from gspm.config import get_stone_config
-    from gspm.topaz import generate_install_script, run_topaz
+    from geode.manifest import load_manifest
+    from geode.lockfile import load_lockfile
+    from geode.config import get_stone_config
+    from geode.topaz import generate_install_script, run_topaz
 
     project_root = Path.cwd()
     manifest, lockfile = _load_project(project_root)
@@ -313,12 +313,12 @@ def test(
         output = run_topaz(script, project_root)
         click.echo(output)
         click.secho("Tests complete.", fg="green")
-    except GspmError as e:
+    except GeodeError as e:
         _error(str(e))
 
 
 # ---------------------------------------------------------------------------
-# gspm update
+# geode update
 # ---------------------------------------------------------------------------
 
 
@@ -328,20 +328,20 @@ def test(
               help="GemStone version to activate gemstone-conditional dependencies")
 def update(package: Optional[str], gs_version: Optional[str]) -> None:
     """Update dependencies within declared constraints."""
-    from gspm.manifest import load_manifest
-    from gspm.lockfile import load_lockfile, save_lockfile
-    from gspm.resolver import PackageSource, Resolver
-    from gspm import cache
-    from gspm import git as git_ops
+    from geode.manifest import load_manifest
+    from geode.lockfile import load_lockfile, save_lockfile
+    from geode.resolver import PackageSource, Resolver
+    from geode import cache
+    from geode import git as git_ops
 
     project_root = Path.cwd()
     manifest_path = project_root / "gemstone.toml"
     if not manifest_path.exists():
-        _error("No gemstone.toml found. Run 'gspm init' first.")
+        _error("No gemstone.toml found. Run 'geode init' first.")
 
     try:
         manifest = load_manifest(manifest_path)
-    except GspmError as e:
+    except GeodeError as e:
         _error(str(e))
 
     click.echo("Resolving dependencies...")
@@ -354,7 +354,7 @@ def update(package: Optional[str], gs_version: Optional[str]) -> None:
             gemstone_version=gs_version,
             platform=_detect_platform(),
         )
-    except GspmError as e:
+    except GeodeError as e:
         _error(str(e))
 
     # Save lockfile
@@ -377,19 +377,19 @@ def update(package: Optional[str], gs_version: Optional[str]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# gspm tree
+# geode tree
 # ---------------------------------------------------------------------------
 
 
 @main.command()
 def tree() -> None:
     """Display the resolved dependency tree."""
-    from gspm.lockfile import load_lockfile
+    from geode.lockfile import load_lockfile
 
     project_root = Path.cwd()
     lock_path = project_root / "gemstone.lock"
     if not lock_path.exists():
-        _error("No gemstone.lock found. Run 'gspm fetch' first.")
+        _error("No gemstone.lock found. Run 'geode fetch' first.")
 
     lockfile = load_lockfile(lock_path)
     if not lockfile.packages:
@@ -427,15 +427,15 @@ def _print_tree(pkg, pkg_map, prefix="", is_last=True):
 
 
 # ---------------------------------------------------------------------------
-# gspm publish
+# geode publish
 # ---------------------------------------------------------------------------
 
 
 @main.command()
 def publish() -> None:
     """Publish this package to the registry."""
-    from gspm.manifest import load_manifest
-    from gspm.registry import publish_package
+    from geode.manifest import load_manifest
+    from geode.registry import publish_package
 
     project_root = Path.cwd()
     manifest_path = project_root / "gemstone.toml"
@@ -444,7 +444,7 @@ def publish() -> None:
 
     try:
         manifest = load_manifest(manifest_path)
-    except GspmError as e:
+    except GeodeError as e:
         _error(str(e))
 
     click.echo(
@@ -455,12 +455,12 @@ def publish() -> None:
         pr_url = publish_package(manifest, project_root)
         click.secho("Published!", fg="green")
         click.echo(f"PR: {pr_url}")
-    except GspmError as e:
+    except GeodeError as e:
         _error(str(e))
 
 
 # ---------------------------------------------------------------------------
-# gspm migrate-mcz
+# geode migrate-mcz
 # ---------------------------------------------------------------------------
 
 
@@ -470,20 +470,20 @@ def publish() -> None:
               help="Output directory (defaults to a sibling of the .mcz file "
                    "named after the package)")
 def migrate_mcz_cmd(mcz_path: str, out_dir: Optional[str]) -> None:
-    """Convert a Monticello .mcz package to a gspm package directory.
+    """Convert a Monticello .mcz package to a geode package directory.
 
     Best-effort migration: the .mcz source is repackaged as Topaz file-in
     format with Monticello stamp metadata stripped. Complex packages
     (traits, unusual extensions) may need manual review of the output.
     """
-    from gspm.mcz import migrate_mcz
+    from geode.mcz import migrate_mcz
 
     mcz = Path(mcz_path).resolve()
     out = Path(out_dir).resolve() if out_dir else mcz.parent / mcz.stem
 
     try:
         manifest_path = migrate_mcz(mcz, out)
-    except GspmError as e:
+    except GeodeError as e:
         _error(str(e))
 
     click.secho(f"Migrated {mcz.name} → {out}", fg="green")
@@ -498,21 +498,21 @@ def migrate_mcz_cmd(mcz_path: str, out_dir: Optional[str]) -> None:
 
 def _load_project(project_root):
     """Load manifest and lockfile, or exit with error."""
-    from gspm.manifest import load_manifest
-    from gspm.lockfile import load_lockfile
+    from geode.manifest import load_manifest
+    from geode.lockfile import load_lockfile
 
     manifest_path = project_root / "gemstone.toml"
     lock_path = project_root / "gemstone.lock"
 
     if not manifest_path.exists():
-        _error("No gemstone.toml found. Run 'gspm init' first.")
+        _error("No gemstone.toml found. Run 'geode init' first.")
     if not lock_path.exists():
-        _error("No gemstone.lock found. Run 'gspm fetch' first.")
+        _error("No gemstone.lock found. Run 'geode fetch' first.")
 
     try:
         manifest = load_manifest(manifest_path)
         lockfile = load_lockfile(lock_path)
-    except GspmError as e:
+    except GeodeError as e:
         _error(str(e))
 
     return manifest, lockfile

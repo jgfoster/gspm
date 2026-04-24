@@ -1,7 +1,7 @@
 # A utility that extends Rowan with custom project introspection.
 #
 # Rowan is GemStone's own package manager.  Its source lives under
-# rowan/src/ in Tonel format, which gspm can transpile.  This sample
+# rowan/src/ in Tonel format, which Geode can transpile.  This sample
 # shows how to consume a dependency whose Tonel packages are NOT at
 # the repository root — the `tonel` paths point into the nested
 # directory structure.

@@ -1,13 +1,13 @@
-"""Tests for gspm.mcz — Monticello .mcz migration shim."""
+"""Tests for geode.mcz — Monticello .mcz migration shim."""
 
 import zipfile
 from pathlib import Path
 
 import pytest
 
-from gspm.errors import MczError
-from gspm.manifest import load_manifest
-from gspm.mcz import (
+from geode.errors import MczError
+from geode.manifest import load_manifest
+from geode.mcz import (
     _clean_chunk_source,
     _name_from_filename,
     _normalize_name,

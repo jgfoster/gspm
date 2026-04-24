@@ -1,4 +1,4 @@
-# Minimal gspm project — no dependencies.
+# Minimal Geode project — no dependencies.
 #
 # This is the simplest possible project: local .gs files loaded into
 # a stone, with tests.

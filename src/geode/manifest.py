@@ -7,8 +7,8 @@ import tomlkit
 from packaging.specifiers import SpecifierSet
 from packaging.version import InvalidVersion, Version
 
-from gspm.errors import ManifestError
-from gspm.models import (
+from geode.errors import ManifestError
+from geode.models import (
     ConditionalDeps,
     Dependency,
     LoadSpec,
@@ -187,7 +187,7 @@ def add_dependency(
 
 
 def scaffold_manifest(name: str) -> str:
-    """Return the content of a skeleton gemstone.toml for `gspm init`."""
+    """Return the content of a skeleton gemstone.toml for `geode init`."""
     return f'''[package]
 name = "{name}"
 version = "0.1.0"

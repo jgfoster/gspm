@@ -3,8 +3,8 @@ requires = ["setuptools>=64.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "gemstone-gspm"
-version = "0.1.0"
+name = "gemstone-geode"
+version = "0.2.0"
 description = "GemStone Package Manager — a Cargo-inspired tool for GemStone/S"
 readme = "README.md"
 license = "MIT"
@@ -19,9 +19,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/jgfoster/gspm"
-Repository = "https://github.com/jgfoster/gspm"
-Issues = "https://github.com/jgfoster/gspm/issues"
+Homepage = "https://github.com/jgfoster/geode"
+Repository = "https://github.com/jgfoster/geode"
+Issues = "https://github.com/jgfoster/geode/issues"
 
 [project.optional-dependencies]
 dev = [
@@ -30,7 +30,7 @@ dev = [
 ]
 
 [project.scripts]
-gspm = "gspm.cli:main"
+geode = "geode.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

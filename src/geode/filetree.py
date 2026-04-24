@@ -16,8 +16,8 @@ import json
 from pathlib import Path
 from typing import List
 
-from gspm.errors import FileTreeError
-from gspm.tonel import (
+from geode.errors import FileTreeError
+from geode.tonel import (
     TonelClass,
     TonelMethod,
     _extract_selector,

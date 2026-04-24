@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.2.0 — 2026-04-24
+
+### Renamed
+
+- Project renamed from `gspm` to `geode`. PyPI distribution is now
+  `gemstone-geode`; the CLI command is `geode`. Hidden working directory
+  in projects is now `.geode/` (was `.gspm/`); global config is now
+  `~/.geode/config.toml` (was `~/.gspm/config.toml`); the default registry
+  index repo is `GemTalk/geode-index` (was `GemTalk/gspm-index`).
+- This is a clean rename with no compatibility shim. Existing `.gspm/`
+  directories are not recognized — re-run `geode fetch` to re-populate
+  under `.geode/`.
+
+### Added
+
+- **TFILE-based Tonel loading** (opt-in): `geode install --tfile` and
+  `geode test --tfile` emit `TFILE` directives directly against
+  `.class.st` files in inheritance order instead of transpiling to a
+  combined `.tpz`. A textual scan detects peer-class forward references
+  in method bodies and falls back to transpilation for affected
+  directories.
+- **Conditional dependencies**: `[dependencies.gemstone.">=X"]` and
+  `[dependencies.platform.<name>]` blocks (also under
+  `[dev-dependencies]`) declare deps that activate only when the target
+  environment matches. The resolver evaluates the blocks; `geode fetch`
+  and `geode update` accept `--gs-version` and auto-detect the platform.
+- **`geode migrate-mcz`**: best-effort one-way migration of Monticello
+  `.mcz` archives. Extracts `snapshot/source.st`, strips Monticello
+  metadata (`stamp:`, `commentStamp:`, `prior:`), and writes a `.gs`
+  file plus a generated `gemstone.toml`. Topaz `input` reads chunk
+  format natively, so no chunk-level parsing is required.
+
+### Documentation
+
+- New "Why Files, Not Images" section in `docs/geode-design.md`
+  rebutting the standard "Smalltalk is different" objections.
+- New "Why git, not OCI" section explaining the choice to distribute
+  via git rather than OCI artifacts.
+- Documented conditional dependencies, TFILE loading, and `.mcz`
+  migration in both the design doc and the README.
+- Renamed `docs/gspm-design.md` → `docs/geode-design.md`.
+
 ## 0.1.1 — 2026-02-28
 
 ### Changed
@@ -54,7 +96,7 @@ Initial release.
 
 - `README.md` — project overview, quick start, manifest reference, Tonel
   format guide, command reference, and comparison with Rowan.
-- `docs/gspm-design.md` — architecture and design decisions.
+- `docs/geode-design.md` — architecture and design decisions.
 - `docs/source-formats.md` — guide to the three supported source formats
   (Topaz, Tonel, FileTree) with configuration examples and sample links.
 

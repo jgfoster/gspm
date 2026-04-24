@@ -1,9 +1,9 @@
-"""Tests for gspm.filetree module — FileTree parser and Topaz generator."""
+"""Tests for geode.filetree module — FileTree parser and Topaz generator."""
 
 import pytest
 from pathlib import Path
 
-from gspm.filetree import (
+from geode.filetree import (
     parse_filetree_method,
     parse_filetree_class,
     parse_filetree_extension,
@@ -11,7 +11,7 @@ from gspm.filetree import (
     discover_filetree_packages,
     transpile_filetree_package,
 )
-from gspm.errors import FileTreeError
+from geode.errors import FileTreeError
 
 
 FILETREE_FIXTURES = Path(__file__).parent / "fixtures" / "filetree"

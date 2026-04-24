@@ -1,6 +1,6 @@
 # Source Formats
 
-gspm can load GemStone code from three source formats. This guide explains
+Geode can load GemStone code from three source formats. This guide explains
 each format, when to use it, and how to configure `gemstone.toml`.
 
 ## Topaz (.gs / .tpz)
@@ -61,7 +61,7 @@ magritte = { version = "^3.7", git = "https://github.com/magritte-metamodel/Magr
 ]}
 ```
 
-List the Tonel directories you need. gspm transpiles each directory into a
+List the Tonel directories you need. Geode transpiles each directory into a
 two-phase Topaz script (class definitions first, then methods) that handles
 forward references automatically.
 
@@ -76,7 +76,7 @@ tonel = [
 ```
 
 **Auto-discovery:** If no `tonel`, `filetree`, or `files` are specified for a
-dependency, gspm recursively searches the cloned repository for Tonel
+dependency, Geode recursively searches the cloned repository for Tonel
 directories (folders containing `.class.st` files) and loads all that it
 finds, excluding test directories.
 
@@ -125,13 +125,13 @@ seaside = { version = "^3.5", git = "https://github.com/SeasideSt/Seaside", file
 ]}
 ```
 
-List the `.package` directories you need. gspm parses each package's class
+List the `.package` directories you need. Geode parses each package's class
 definitions and methods, sorts them by inheritance order, and generates a
 two-phase Topaz script — identical to Tonel output.
 
 ### Auto-discovery
 
-If no overrides are specified, gspm also searches for `.package/` directories
+If no overrides are specified, Geode also searches for `.package/` directories
 alongside Tonel directories. Test packages (names containing `-Tests` or
 `-Test`) are skipped automatically.
 
@@ -159,7 +159,7 @@ seaside = { version = "^3.5", git = "...", filetree = ["repository/Seaside-Core.
 magritte = { version = "^3.7", git = "...", tonel = ["source/Magritte-Model"] }
 ```
 
-gspm resolves and loads dependencies in declaration order, transpiling each
+Geode resolves and loads dependencies in declaration order, transpiling each
 format into Topaz before loading.
 
 ---
@@ -168,7 +168,7 @@ format into Topaz before loading.
 
 Both Tonel and FileTree support variable-size (indexable) classes. In
 FileTree, set `"type": "variable"` in `properties.json`. In Tonel, use
-`#variable` in the STON class type. gspm generates `indexableSubclass:`
+`#variable` in the STON class type. Geode generates `indexableSubclass:`
 instead of `subclass:` in the output Topaz script.
 
 ---
@@ -177,13 +177,13 @@ instead of `subclass:` in the output Topaz script.
 
 ```bash
 # FileTree dependency
-gspm add seaside --version "^3.5" \
+Geode add seaside --version "^3.5" \
     --git "https://github.com/SeasideSt/Seaside" \
     --filetree "repository/Seaside-Core.package" \
     --filetree "repository/Seaside-Component.package"
 
 # Tonel dependency
-gspm add magritte --version "^3.7" \
+Geode add magritte --version "^3.7" \
     --git "https://github.com/magritte-metamodel/Magritte" \
     --tonel "source/Magritte-Model"
 ```

@@ -1,11 +1,11 @@
-"""Tests for gspm.lockfile module."""
+"""Tests for geode.lockfile module."""
 
 import pytest
 from pathlib import Path
 
-from gspm.lockfile import load_lockfile, save_lockfile
-from gspm.models import Lockfile, ResolvedPackage
-from gspm.errors import LockfileError
+from geode.lockfile import load_lockfile, save_lockfile
+from geode.models import Lockfile, ResolvedPackage
+from geode.errors import LockfileError
 
 
 class TestLoadLockfile:

@@ -1,4 +1,4 @@
-"""User and project configuration for gspm."""
+"""User and project configuration for Geode."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -6,12 +6,12 @@ from typing import Dict, Optional
 
 import tomlkit
 
-from gspm.errors import ConfigError
+from geode.errors import ConfigError
 
-GLOBAL_CONFIG_DIR = Path.home() / ".gspm"
+GLOBAL_CONFIG_DIR = Path.home() / ".geode"
 GLOBAL_CONFIG_FILE = GLOBAL_CONFIG_DIR / "config.toml"
 
-DEFAULT_REGISTRY = "https://github.com/GemTalk/gspm-index"
+DEFAULT_REGISTRY = "https://github.com/GemTalk/geode-index"
 
 
 @dataclass
@@ -25,14 +25,14 @@ class StoneConfig:
 
 @dataclass
 class GspmConfig:
-    """Global gspm configuration."""
+    """Global Geode configuration."""
 
     registry_url: str = DEFAULT_REGISTRY
     stones: Dict[str, StoneConfig] = field(default_factory=dict)
 
 
 def load_config() -> GspmConfig:
-    """Load global config from ~/.gspm/config.toml.
+    """Load global config from ~/.geode/config.toml.
 
     Returns default config if file doesn't exist.
     """

@@ -1,11 +1,11 @@
-"""Integration tests for gspm CLI."""
+"""Integration tests for the Geode CLI."""
 
 import pytest
 from pathlib import Path
 
 from click.testing import CliRunner
 
-from gspm.cli import main
+from geode.cli import main
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ class TestVersion:
     def test_version(self, runner):
         result = runner.invoke(main, ["--version"])
         assert result.exit_code == 0
-        assert "0.1.0" in result.output
+        assert "0.2.0" in result.output
 
 
 class TestInit:

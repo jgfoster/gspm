@@ -9,6 +9,40 @@ CLI that generates Topaz scripts.
 
 ---
 
+## Why Files, Not Images
+
+The Smalltalk tradition treats the live image as the source of truth, with
+files as a secondary export. gspm inverts this: files are canonical, and the
+image is a build artifact derived from them. Three commonly cited objections
+to this inversion do not survive scrutiny.
+
+**"Smalltalk is a live object graph, not files."** True, and so is Python's
+runtime once you `import` a module — a live namespace subject to monkey-patching
+and reflection. The practical flow is the same in both: start with a base
+runtime, load packages, run. Starting from a vendor image instead of an
+interpreter binary is a distribution detail, not a semantic one.
+
+**"Loading into GemStone is a database migration."** Only when a class's shape
+changes *and* persistent instances of that class exist. For the common case —
+loading a new package, or reloading one whose class layout is unchanged — the
+class builder is a no-op, exactly as `ALTER TABLE` is a no-op when the schema
+is already current. Schema evolution is a real operational concern, but it is
+orthogonal to package management.
+
+**"There is no separate build step."** A framing choice, not a technical one.
+Metacello collapses fetch and load into a single image-side operation. The
+Topaz CLI makes it straightforward to split them, and gspm does: `gspm fetch`
+resolves and downloads to disk; `gspm install` generates and runs a Topaz
+script. Either step can be inspected before the next one runs.
+
+The one genuine distinction is workflow *direction*: most Smalltalkers edit
+code inside the image and export to files, rather than editing files and
+loading into the image. gspm does not solve the export direction — it assumes
+files are where you edit. For projects willing to accept that constraint,
+every other part of the pipeline is standard.
+
+---
+
 ## The Manifest File: `gemstone.toml`
 
 TOML is a natural choice for the manifest because it is simple, human-readable,
@@ -66,6 +100,31 @@ files = ["tests/SeasideTests.gs"]
   packages that lack their own `gemstone.toml` (see below).
 - `[dev-dependencies]` mirrors Cargo's concept — test code and test framework are
   declared separately and only loaded when explicitly requested.
+
+### Conditional dependencies
+
+In addition to conditional *files* (via `[load.conditions]`), the manifest
+supports conditional *dependencies* — a dependency that is only activated
+on certain GemStone versions or platforms:
+
+```toml
+[dependencies.gemstone.">=3.7"]
+gemstone-extras = { version = "^1.0", git = "..." }
+
+[dependencies.platform.linux]
+linux-support = { version = "^1.0", git = "..." }
+```
+
+The resolver evaluates these blocks against the target environment.
+`gspm fetch` and `gspm update` accept `--gs-version` to activate
+gemstone-conditional blocks; the platform is auto-detected from the host.
+A block whose dimension is not provided is skipped — so a fetch without
+`--gs-version` will not include any gemstone-conditional dependencies.
+
+`gemstone` and `platform` are reserved sub-table names under
+`[dependencies]` and `[dev-dependencies]` and cannot be used as regular
+dependency names. Existing manifests without conditional blocks remain
+valid.
 
 ---
 
@@ -249,6 +308,27 @@ community-curated list of available packages. It requires no server infrastructu
 beyond a GitHub repository, and the community is small enough that curation is
 feasible.
 
+### Why git, not OCI
+
+An alternative design would distribute packages as OCI artifacts via `oras` to
+a registry such as GitHub Container Registry. OCI gives you content-addressed
+storage and standard tooling, and is a reasonable choice in the abstract.
+
+gspm uses git instead because, for this community, git is already the
+lower-friction option:
+
+- Every GemStone package already lives in a git repository. An OCI layer would
+  require authors to publish the same content twice.
+- Git SHAs are content-addressed. The lockfile pins a SHA, which is the same
+  reproducibility guarantee an OCI digest would provide.
+- GitHub auth is already in every contributor's environment; `oras login`
+  against a separate registry is one more setup step.
+- The JSON index repo is a thinner publishing surface than an OCI artifact
+  spec — a pull request editing one JSON file, reviewable in the usual way.
+
+OCI transport could be added later as an alternative source type in
+`gemstone.toml` without disturbing the rest of the design.
+
 ---
 
 ## Tonel Transpilation
@@ -287,6 +367,23 @@ This applies to both the project's own source and fetched dependencies — if a
 dependency's `gemstone.toml` declares `tonel` directories, gspm transpiles them
 automatically.
 
+### Native TFILE loading (opt-in)
+
+Newer versions of Topaz support `TFILE`, which loads Tonel `.class.st` /
+`.method.st` files directly without an intermediate transpile step. When
+`gspm install` or `gspm test` is invoked with `--tfile`, the loader emits
+`TFILE` directives in inheritance order instead of producing a combined
+`.tpz`.
+
+This skips the transpilation pass at the cost of two-phase forward-reference
+handling: TFILE compiles each file's methods immediately, so a method body
+in class A cannot reference a peer class B that comes later in the load
+order. Before emitting TFILE directives, gspm scans method bodies for
+references to local class names that have not yet been loaded; if any are
+found, it falls back to the transpile path for that directory and notes
+the fallback in the generated script. The textual scan is conservative —
+false positives only force the safe fallback.
+
 ---
 
 ## Backwards Compatibility with Existing Packages
@@ -315,6 +412,29 @@ The dependency itself never needs to change.
 For version resolution, missing manifests are treated as having no transitive
 dependencies — which is correct for most existing packages that were designed
 for monolithic loading.
+
+### Migration from `.mcz` and Metacello baselines
+
+A substantial amount of existing GemStone code is distributed as Monticello
+`.mcz` archives or described by Metacello baseline classes. Both are in
+scope as one-way migration shims — tools that produce a gspm-compatible
+package from the legacy source, rather than runtime adapters.
+
+- **`.mcz` conversion (implemented)**: `gspm migrate-mcz <path>` extracts
+  the archive, locates `snapshot/source.st`, strips Monticello-specific
+  metadata (`stamp:`, `commentStamp:`, `prior:`) that Topaz does not
+  recognize, and writes the source as a `.gs` file alongside a generated
+  `gemstone.toml`. Topaz `input` reads chunk-format files directly, so no
+  chunk-level parsing is required for the round-trip. Best-effort —
+  packages with traits or unusual extensions may need manual review.
+- **Metacello baseline parsing (roadmap)**: most baselines are formulaic —
+  `package:`, `requires:`, `for: #common`, `for: #gemstone` with version
+  guards. A pattern-matching parser could extract these into a generated
+  `gemstone.toml`. Baselines with complex conditional Smalltalk logic
+  would produce a warning and require manual review.
+
+These are onboarding aids, not steady-state components. Once a package has
+been migrated it lives in gspm the same way any other package does.
 
 ---
 

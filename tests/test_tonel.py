@@ -9,6 +9,8 @@ from gspm.tonel import (
     generate_combined_tpz,
     discover_tonel_files,
     determine_load_order,
+    has_forward_class_refs,
+    parse_and_order_tonel,
     transpile_directory,
     _parse_ston,
 )
@@ -325,6 +327,128 @@ class TestTranspileDirectory:
 # ---------------------------------------------------------------------------
 # Integration: manifest with tonel
 # ---------------------------------------------------------------------------
+
+
+class TestParseAndOrderTonel:
+    def test_returns_path_class_pairs_in_order(self):
+        ordered = parse_and_order_tonel(TONEL_FIXTURES)
+        assert len(ordered) == 3
+        names = [tc.name for _, tc in ordered]
+        assert names.index("MyBaseClass") < names.index("MySubClass")
+        # All paths point to actual files
+        for path, _ in ordered:
+            assert path.exists()
+            assert path.suffix == ".st"
+
+    def test_empty_dir(self, tmp_path):
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        assert parse_and_order_tonel(empty) == []
+
+
+class TestHasForwardClassRefs:
+    def test_no_refs_means_safe(self):
+        ordered = parse_and_order_tonel(TONEL_FIXTURES)
+        # Fixture classes don't reference each other in method bodies
+        assert has_forward_class_refs(ordered) is False
+
+    def test_single_class_is_safe(self):
+        ordered = parse_and_order_tonel(TONEL_FIXTURES)
+        # One class alone can't have peer forward refs
+        single = [(ordered[0][0], ordered[0][1])]
+        assert has_forward_class_refs(single) is False
+
+    def test_empty_is_safe(self):
+        assert has_forward_class_refs([]) is False
+
+    def test_forward_ref_detected(self, tmp_path):
+        # Two classes where the first references the second
+        a_file = tmp_path / "Alpha.st"
+        a_file.write_text(
+            'Class {\n'
+            "    #name : #Alpha,\n"
+            "    #superclass : #Object,\n"
+            "    #instVars : [],\n"
+            "    #classVars : [],\n"
+            "    #poolDictionaries : [],\n"
+            "    #category : #'X'\n"
+            "}\n"
+            "\n"
+            "{ #category : #x }\n"
+            "Alpha >> useBeta [\n"
+            "    ^ Beta new\n"
+            "]\n"
+        )
+        b_file = tmp_path / "Beta.st"
+        b_file.write_text(
+            'Class {\n'
+            "    #name : #Beta,\n"
+            "    #superclass : #Object,\n"
+            "    #instVars : [],\n"
+            "    #classVars : [],\n"
+            "    #poolDictionaries : [],\n"
+            "    #category : #'X'\n"
+            "}\n"
+        )
+        ordered = parse_and_order_tonel(tmp_path)
+        # Alpha and Beta are peers; Alpha references Beta. Discovery is
+        # alphabetical, so Alpha comes first → forward ref to Beta.
+        assert has_forward_class_refs(ordered) is True
+
+    def test_self_reference_is_safe(self, tmp_path):
+        # A class can reference itself in its own methods
+        f = tmp_path / "Solo.st"
+        f.write_text(
+            'Class {\n'
+            "    #name : #Solo,\n"
+            "    #superclass : #Object,\n"
+            "    #instVars : [],\n"
+            "    #classVars : [],\n"
+            "    #poolDictionaries : [],\n"
+            "    #category : #'X'\n"
+            "}\n"
+            "\n"
+            "{ #category : #x }\n"
+            "Solo >> copy [\n"
+            "    ^ Solo new\n"
+            "]\n"
+        )
+        ordered = parse_and_order_tonel(tmp_path)
+        assert has_forward_class_refs(ordered) is False
+
+    def test_back_reference_is_safe(self, tmp_path):
+        # Subclass referencing its superclass loads after, so safe
+        base = tmp_path / "AAA_Base.st"
+        base.write_text(
+            'Class {\n'
+            "    #name : #ABase,\n"
+            "    #superclass : #Object,\n"
+            "    #instVars : [],\n"
+            "    #classVars : [],\n"
+            "    #poolDictionaries : [],\n"
+            "    #category : #'X'\n"
+            "}\n"
+        )
+        sub = tmp_path / "BBB_Sub.st"
+        sub.write_text(
+            'Class {\n'
+            "    #name : #ASub,\n"
+            "    #superclass : #ABase,\n"
+            "    #instVars : [],\n"
+            "    #classVars : [],\n"
+            "    #poolDictionaries : [],\n"
+            "    #category : #'X'\n"
+            "}\n"
+            "\n"
+            "{ #category : #x }\n"
+            "ASub >> useBase [\n"
+            "    ^ ABase new\n"
+            "]\n"
+        )
+        ordered = parse_and_order_tonel(tmp_path)
+        # ABase loads first (superclass), ASub loads second; ASub
+        # references ABase, which is already defined.
+        assert has_forward_class_refs(ordered) is False
 
 
 class TestManifestTonel:

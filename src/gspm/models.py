@@ -47,6 +47,22 @@ class SuiteSpec:
 
 
 @dataclass
+class ConditionalDeps:
+    """A block of dependencies that only apply under a specific condition.
+
+    ``dimension`` is the conditional axis ("gemstone" or "platform").
+    ``spec`` is the per-dimension predicate — a PEP 440 specifier like
+    ">=3.7" for the "gemstone" dimension, or a platform name like "linux"
+    for the "platform" dimension. ``deps`` is the set of dependencies
+    activated when the condition matches.
+    """
+
+    dimension: str
+    spec: str
+    deps: Dict[str, "Dependency"] = field(default_factory=dict)
+
+
+@dataclass
 class Manifest:
     """Complete parsed gemstone.toml."""
 
@@ -54,6 +70,8 @@ class Manifest:
     load: LoadSpec = field(default_factory=LoadSpec)
     dependencies: Dict[str, Dependency] = field(default_factory=dict)
     dev_dependencies: Dict[str, Dependency] = field(default_factory=dict)
+    conditional_dependencies: List[ConditionalDeps] = field(default_factory=list)
+    conditional_dev_dependencies: List[ConditionalDeps] = field(default_factory=list)
     test: SuiteSpec = field(default_factory=SuiteSpec)
 
 

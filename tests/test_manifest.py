@@ -4,6 +4,7 @@ import pytest
 from pathlib import Path
 
 from gspm.manifest import (
+    evaluate_conditional_dependencies,
     expand_constraint,
     load_manifest,
     save_manifest,
@@ -11,6 +12,12 @@ from gspm.manifest import (
     scaffold_manifest,
 )
 from gspm.errors import ManifestError
+from gspm.models import (
+    ConditionalDeps,
+    Dependency,
+    Manifest,
+    PackageMetadata,
+)
 
 
 class TestExpandConstraint:
@@ -220,6 +227,163 @@ class TestAddDependency:
             "repository/Grease-Core.package",
             "repository/Grease-GemStone-Core.package",
         ]
+
+
+class TestConditionalDependencyParsing:
+    """Test parsing of [dependencies.gemstone.*] and [dependencies.platform.*]."""
+
+    def _write(self, tmp_path, content):
+        path = tmp_path / "gemstone.toml"
+        path.write_text(content)
+        return load_manifest(path)
+
+    def test_gemstone_conditional_block(self, tmp_path):
+        m = self._write(tmp_path, '''
+[package]
+name = "x"
+version = "1.0.0"
+
+[dependencies]
+zinc = { version = "^1.2", git = "https://example.com/zinc" }
+
+[dependencies.gemstone.">=3.7"]
+gemstone-extras = { version = "^1.0", git = "https://example.com/gs-extras" }
+''')
+        assert "zinc" in m.dependencies
+        assert "gemstone-extras" not in m.dependencies
+        assert len(m.conditional_dependencies) == 1
+        block = m.conditional_dependencies[0]
+        assert block.dimension == "gemstone"
+        assert block.spec == ">=3.7"
+        assert "gemstone-extras" in block.deps
+
+    def test_platform_conditional_block(self, tmp_path):
+        m = self._write(tmp_path, '''
+[package]
+name = "x"
+version = "1.0.0"
+
+[dependencies.platform.linux]
+linux-support = { version = "^1.0", git = "https://example.com/linux" }
+
+[dependencies.platform.macos]
+mac-support = { version = "^1.0", git = "https://example.com/mac" }
+''')
+        assert m.dependencies == {}
+        assert len(m.conditional_dependencies) == 2
+        platforms = sorted(b.spec for b in m.conditional_dependencies)
+        assert platforms == ["linux", "macos"]
+
+    def test_conditional_dev_dependencies(self, tmp_path):
+        m = self._write(tmp_path, '''
+[package]
+name = "x"
+version = "1.0.0"
+
+[dev-dependencies.gemstone.">=3.7"]
+new-test-fw = { version = "^1.0", git = "https://example.com/ntf" }
+''')
+        assert m.dev_dependencies == {}
+        assert len(m.conditional_dev_dependencies) == 1
+        assert "new-test-fw" in m.conditional_dev_dependencies[0].deps
+
+    def test_invalid_gemstone_spec_rejected(self, tmp_path):
+        with pytest.raises(ManifestError, match="GemStone version specifier"):
+            self._write(tmp_path, '''
+[package]
+name = "x"
+version = "1.0.0"
+
+[dependencies.gemstone."not-a-version"]
+foo = { version = "^1.0", git = "https://x" }
+''')
+
+    def test_round_trip(self, tmp_path):
+        original = Manifest(
+            package=PackageMetadata(name="x", version="1.0.0"),
+            dependencies={"zinc": Dependency(name="zinc", version="^1.2",
+                                              git="https://example.com/zinc")},
+            conditional_dependencies=[
+                ConditionalDeps(
+                    dimension="gemstone", spec=">=3.7",
+                    deps={"gs37": Dependency(name="gs37", version="^1.0",
+                                              git="https://example.com/gs37")},
+                ),
+                ConditionalDeps(
+                    dimension="platform", spec="linux",
+                    deps={"lx": Dependency(name="lx", version="^1.0",
+                                            git="https://example.com/lx")},
+                ),
+            ],
+        )
+        path = tmp_path / "gemstone.toml"
+        save_manifest(original, path)
+        reloaded = load_manifest(path)
+        assert "zinc" in reloaded.dependencies
+        assert len(reloaded.conditional_dependencies) == 2
+        dims = {(b.dimension, b.spec) for b in reloaded.conditional_dependencies}
+        assert ("gemstone", ">=3.7") in dims
+        assert ("platform", "linux") in dims
+
+
+class TestEvaluateConditionalDependencies:
+    """Test evaluation of conditional dependency blocks against an environment."""
+
+    def _block(self, dim, spec, name="dep"):
+        return ConditionalDeps(
+            dimension=dim, spec=spec,
+            deps={name: Dependency(name=name, version="^1.0", git="https://x")},
+        )
+
+    def test_gemstone_match(self):
+        blocks = [self._block("gemstone", ">=3.7", "extras")]
+        result = evaluate_conditional_dependencies(blocks, "3.7.1", None)
+        assert "extras" in result
+
+    def test_gemstone_miss(self):
+        blocks = [self._block("gemstone", ">=3.7", "extras")]
+        result = evaluate_conditional_dependencies(blocks, "3.6.0", None)
+        assert result == {}
+
+    def test_gemstone_skipped_without_version(self):
+        blocks = [self._block("gemstone", ">=3.7", "extras")]
+        result = evaluate_conditional_dependencies(blocks, None, "linux")
+        assert result == {}
+
+    def test_platform_match(self):
+        blocks = [self._block("platform", "linux", "lx")]
+        result = evaluate_conditional_dependencies(blocks, None, "linux")
+        assert "lx" in result
+
+    def test_platform_miss(self):
+        blocks = [self._block("platform", "linux", "lx")]
+        result = evaluate_conditional_dependencies(blocks, None, "macos")
+        assert result == {}
+
+    def test_platform_skipped_without_platform(self):
+        blocks = [self._block("platform", "linux", "lx")]
+        result = evaluate_conditional_dependencies(blocks, "3.7", None)
+        assert result == {}
+
+    def test_multiple_blocks_combine(self):
+        blocks = [
+            self._block("gemstone", ">=3.7", "gs"),
+            self._block("platform", "linux", "lx"),
+        ]
+        result = evaluate_conditional_dependencies(blocks, "3.7.0", "linux")
+        assert "gs" in result
+        assert "lx" in result
+
+    def test_later_block_overrides(self):
+        # Two blocks both producing the same dep name; second wins.
+        d1 = Dependency(name="x", version="^1.0", git="https://a")
+        d2 = Dependency(name="x", version="^2.0", git="https://b")
+        blocks = [
+            ConditionalDeps(dimension="gemstone", spec=">=3.7", deps={"x": d1}),
+            ConditionalDeps(dimension="platform", spec="linux", deps={"x": d2}),
+        ]
+        result = evaluate_conditional_dependencies(blocks, "3.7", "linux")
+        assert result["x"].version == "^2.0"
 
 
 class TestScaffoldManifest:

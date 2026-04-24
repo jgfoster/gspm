@@ -1,19 +1,27 @@
 """Parse and write gemstone.toml manifest files."""
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import tomlkit
 from packaging.specifiers import SpecifierSet
+from packaging.version import InvalidVersion, Version
 
 from gspm.errors import ManifestError
 from gspm.models import (
+    ConditionalDeps,
     Dependency,
     LoadSpec,
     Manifest,
     PackageMetadata,
     SuiteSpec,
 )
+
+
+# Reserved sub-table names under [dependencies] / [dev-dependencies] that
+# introduce conditional dependency blocks (e.g. [dependencies.gemstone.">=3.7"]).
+# A regular dependency cannot have these names.
+_CONDITIONAL_DIMENSIONS = ("gemstone", "platform")
 
 
 def load_manifest(path: Path) -> Manifest:
@@ -59,11 +67,15 @@ def load_manifest(path: Path) -> Manifest:
         conditions=load_conditions,
     )
 
-    # [dependencies]
-    dependencies = _parse_dependencies(doc.get("dependencies", {}))
+    # [dependencies] — splits into regular and conditional blocks
+    dependencies, conditional_dependencies = _parse_dependency_section(
+        doc.get("dependencies", {})
+    )
 
     # [dev-dependencies]
-    dev_dependencies = _parse_dependencies(doc.get("dev-dependencies", {}))
+    dev_dependencies, conditional_dev_dependencies = _parse_dependency_section(
+        doc.get("dev-dependencies", {})
+    )
 
     # [test]
     test_table = doc.get("test", {})
@@ -74,6 +86,8 @@ def load_manifest(path: Path) -> Manifest:
         load=load,
         dependencies=dependencies,
         dev_dependencies=dev_dependencies,
+        conditional_dependencies=conditional_dependencies,
+        conditional_dev_dependencies=conditional_dev_dependencies,
         test=test,
     )
 
@@ -114,18 +128,18 @@ def save_manifest(manifest: Manifest, path: Path) -> None:
             load.add("conditions", conditions)
         doc.add("load", load)
 
-    # [dependencies]
-    if manifest.dependencies:
-        deps = tomlkit.table()
-        for name, dep in manifest.dependencies.items():
-            deps.add(name, _dep_to_inline_table(dep))
+    # [dependencies] (regular + conditional)
+    if manifest.dependencies or manifest.conditional_dependencies:
+        deps = _build_dependency_table(
+            manifest.dependencies, manifest.conditional_dependencies
+        )
         doc.add("dependencies", deps)
 
-    # [dev-dependencies]
-    if manifest.dev_dependencies:
-        dev_deps = tomlkit.table()
-        for name, dep in manifest.dev_dependencies.items():
-            dev_deps.add(name, _dep_to_inline_table(dep))
+    # [dev-dependencies] (regular + conditional)
+    if manifest.dev_dependencies or manifest.conditional_dev_dependencies:
+        dev_deps = _build_dependency_table(
+            manifest.dev_dependencies, manifest.conditional_dev_dependencies
+        )
         doc.add("dev-dependencies", dev_deps)
 
     # [test]
@@ -253,14 +267,50 @@ def _expand_tilde(version: str) -> str:
     return f">={version},<{major}.{minor + 1}.0"
 
 
-def _parse_dependencies(table: dict) -> Dict[str, Dependency]:
-    """Parse a [dependencies] or [dev-dependencies] table."""
-    deps: Dict[str, Dependency] = {}
+def _parse_dependency_section(
+    table: dict,
+) -> Tuple[Dict[str, Dependency], List[ConditionalDeps]]:
+    """Split a [dependencies] table into regular deps and conditional blocks.
+
+    Conditional blocks live under reserved sub-table names — currently
+    "gemstone" and "platform". For example::
+
+        [dependencies.gemstone.">=3.7"]
+        gemstone-extras = { version = "^1.0", git = "..." }
+
+        [dependencies.platform.linux]
+        linux-support = { version = "^1.0", git = "..." }
+
+    All other entries are regular dependencies.
+    """
+    regular: Dict[str, Dependency] = {}
+    conditional: List[ConditionalDeps] = []
+
     for name, spec in table.items():
+        if name in _CONDITIONAL_DIMENSIONS:
+            if not isinstance(spec, dict):
+                raise ManifestError(
+                    f"Conditional block '{name}' must be a table"
+                )
+            for cond_spec, dep_table in spec.items():
+                if not isinstance(dep_table, dict):
+                    raise ManifestError(
+                        f"Condition '{name}.{cond_spec}' must contain a "
+                        f"dependency table"
+                    )
+                if name == "gemstone":
+                    _validate_gemstone_spec(cond_spec)
+                conditional.append(ConditionalDeps(
+                    dimension=name,
+                    spec=cond_spec,
+                    deps=_parse_dependencies(dep_table),
+                ))
+            continue
+
         if isinstance(spec, str):
-            deps[name] = Dependency(name=name, version=spec)
+            regular[name] = Dependency(name=name, version=spec)
         elif isinstance(spec, dict):
-            deps[name] = Dependency(
+            regular[name] = Dependency(
                 name=name,
                 version=spec.get("version", "*"),
                 git=spec.get("git", ""),
@@ -272,7 +322,93 @@ def _parse_dependencies(table: dict) -> Dict[str, Dependency]:
             raise ManifestError(
                 f"Invalid dependency spec for '{name}': expected string or table"
             )
+    return regular, conditional
+
+
+def _parse_dependencies(table: dict) -> Dict[str, Dependency]:
+    """Parse a flat dependency table (no conditional blocks expected)."""
+    deps, conditional = _parse_dependency_section(table)
+    if conditional:
+        raise ManifestError(
+            "Conditional dependencies are not allowed in this context"
+        )
     return deps
+
+
+def _validate_gemstone_spec(spec: str) -> None:
+    """Ensure a gemstone-version condition spec is a valid PEP 440 specifier."""
+    try:
+        SpecifierSet(spec)
+    except Exception as e:
+        raise ManifestError(
+            f"Invalid GemStone version specifier '{spec}': {e}"
+        ) from e
+
+
+def evaluate_conditional_dependencies(
+    blocks: List[ConditionalDeps],
+    gemstone_version: Optional[str],
+    platform: Optional[str],
+) -> Dict[str, Dependency]:
+    """Return the dependencies whose condition matches the given environment.
+
+    A ``None`` ``gemstone_version`` causes gemstone-conditional blocks to be
+    skipped entirely (the deps are not included). Likewise for
+    ``platform``. Later matching blocks override earlier ones for the same
+    dependency name.
+    """
+    activated: Dict[str, Dependency] = {}
+    for block in blocks:
+        if block.dimension == "gemstone":
+            if gemstone_version is None:
+                continue
+            try:
+                gs_ver = Version(gemstone_version)
+            except InvalidVersion:
+                continue
+            try:
+                if gs_ver not in SpecifierSet(block.spec):
+                    continue
+            except Exception:
+                continue
+        elif block.dimension == "platform":
+            if platform is None:
+                continue
+            if block.spec != platform:
+                continue
+        else:
+            continue
+        activated.update(block.deps)
+    return activated
+
+
+def _build_dependency_table(
+    regular: Dict[str, Dependency],
+    conditional: List[ConditionalDeps],
+) -> tomlkit.items.Table:
+    """Build a TOML table containing regular deps and conditional sub-tables."""
+    table = tomlkit.table()
+    for name, dep in regular.items():
+        table.add(name, _dep_to_inline_table(dep))
+
+    # Group conditional blocks by dimension so all gemstone conditions
+    # share one [dependencies.gemstone] sub-table, etc.
+    by_dim: Dict[str, List[ConditionalDeps]] = {}
+    for block in conditional:
+        by_dim.setdefault(block.dimension, []).append(block)
+
+    for dim in _CONDITIONAL_DIMENSIONS:
+        if dim not in by_dim:
+            continue
+        dim_table = tomlkit.table()
+        for block in by_dim[dim]:
+            spec_table = tomlkit.table()
+            for dep_name, dep in block.deps.items():
+                spec_table.add(dep_name, _dep_to_inline_table(dep))
+            dim_table.add(block.spec, spec_table)
+        table.add(dim, dim_table)
+
+    return table
 
 
 def _dep_to_inline_table(dep: Dependency) -> tomlkit.items.InlineTable:

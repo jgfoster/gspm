@@ -7,6 +7,7 @@ from packaging.version import Version
 
 from gspm.errors import ResolverError
 from gspm.models import (
+    ConditionalDeps,
     Dependency,
     Manifest,
     PackageMetadata,
@@ -217,3 +218,83 @@ class TestResolver:
         # With dev deps
         lockfile_dev = resolver.resolve(manifest, include_dev=True)
         assert lockfile_dev.find("testlib") is not None
+
+
+class TestConditionalDependencies:
+    """Test that the resolver activates the right conditional blocks."""
+
+    def _registry(self):
+        return MockPackageSource({
+            "core":   [("1.0.0", "sha-core", {})],
+            "gs37":   [("1.0.0", "sha-gs37", {})],
+            "linux":  [("1.0.0", "sha-linux", {})],
+            "darwin": [("1.0.0", "sha-darwin", {})],
+        })
+
+    def _make_manifest(self):
+        return Manifest(
+            package=PackageMetadata(name="root", version="1.0.0"),
+            dependencies={
+                "core": Dependency(name="core", version="^1.0",
+                                   git="https://example.com/core"),
+            },
+            conditional_dependencies=[
+                ConditionalDeps(
+                    dimension="gemstone", spec=">=3.7",
+                    deps={"gs37": Dependency(name="gs37", version="^1.0",
+                                              git="https://example.com/gs37")},
+                ),
+                ConditionalDeps(
+                    dimension="platform", spec="linux",
+                    deps={"linux": Dependency(name="linux", version="^1.0",
+                                               git="https://example.com/linux")},
+                ),
+                ConditionalDeps(
+                    dimension="platform", spec="macos",
+                    deps={"darwin": Dependency(name="darwin", version="^1.0",
+                                                git="https://example.com/darwin")},
+                ),
+            ],
+        )
+
+    def test_no_environment_skips_conditionals(self):
+        resolver = Resolver(self._registry())
+        lockfile = resolver.resolve(self._make_manifest())
+        assert lockfile.find("core") is not None
+        assert lockfile.find("gs37") is None
+        assert lockfile.find("linux") is None
+        assert lockfile.find("darwin") is None
+
+    def test_gemstone_version_activates_block(self):
+        resolver = Resolver(self._registry())
+        lockfile = resolver.resolve(
+            self._make_manifest(), gemstone_version="3.7.0"
+        )
+        assert lockfile.find("gs37") is not None
+        # Old version: no activation
+        lockfile2 = resolver.resolve(
+            self._make_manifest(), gemstone_version="3.6.0"
+        )
+        assert lockfile2.find("gs37") is None
+
+    def test_platform_activates_correct_block(self):
+        resolver = Resolver(self._registry())
+        lf_linux = resolver.resolve(self._make_manifest(), platform="linux")
+        assert lf_linux.find("linux") is not None
+        assert lf_linux.find("darwin") is None
+
+        lf_macos = resolver.resolve(self._make_manifest(), platform="macos")
+        assert lf_macos.find("darwin") is not None
+        assert lf_macos.find("linux") is None
+
+    def test_combined_activation(self):
+        resolver = Resolver(self._registry())
+        lockfile = resolver.resolve(
+            self._make_manifest(),
+            gemstone_version="3.7.5",
+            platform="linux",
+        )
+        assert lockfile.find("core") is not None
+        assert lockfile.find("gs37") is not None
+        assert lockfile.find("linux") is not None
+        assert lockfile.find("darwin") is None

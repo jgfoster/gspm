@@ -530,6 +530,146 @@ class TestGenerateInstallScript:
         )
         assert ".tpz" in script
 
+    def test_use_tfile_emits_tfile_directives(self, tmp_path):
+        """With use_tfile=True and no forward refs, emit TFILE per .st file."""
+        dep_dir = tmp_path / ".gspm" / "deps" / "tfilepkg"
+        pkg_dir = dep_dir / "src" / "Pkg"
+        pkg_dir.mkdir(parents=True)
+        (pkg_dir / "OneClass.st").write_text(
+            'Class {\n'
+            "    #name : #OneClass,\n"
+            "    #superclass : #Object,\n"
+            "    #instVars : [],\n"
+            "    #classVars : [],\n"
+            "    #poolDictionaries : [],\n"
+            "    #category : #'Pkg'\n"
+            "}\n"
+        )
+
+        manifest = Manifest(
+            package=PackageMetadata(name="myapp", version="1.0.0"),
+            load=LoadSpec(),
+            dependencies={
+                "tfilepkg": Dependency(
+                    name="tfilepkg", version="^1.0",
+                    git="https://example.com/tfilepkg",
+                    tonel=["src/Pkg"],
+                ),
+            },
+        )
+        lockfile = Lockfile(packages=[
+            ResolvedPackage(name="tfilepkg", version="1.0.0",
+                            source="git+https://example.com/tfilepkg", sha="tf001"),
+        ])
+
+        script = generate_install_script(
+            project_root=tmp_path, manifest=manifest,
+            lockfile=lockfile, stone_name="mystone",
+            use_tfile=True,
+        )
+        assert f"TFILE {pkg_dir / 'OneClass.st'}" in script
+        # Should NOT have transpiled
+        assert ".tpz" not in script
+
+    def test_use_tfile_falls_back_when_forward_refs(self, tmp_path):
+        """With use_tfile=True but forward refs present, transpile instead."""
+        dep_dir = tmp_path / ".gspm" / "deps" / "cyclic"
+        pkg_dir = dep_dir / "src" / "Cycle"
+        pkg_dir.mkdir(parents=True)
+        # Alpha references Beta; Alpha loads first (alphabetical) → forward ref
+        (pkg_dir / "Alpha.st").write_text(
+            'Class {\n'
+            "    #name : #Alpha,\n"
+            "    #superclass : #Object,\n"
+            "    #instVars : [],\n"
+            "    #classVars : [],\n"
+            "    #poolDictionaries : [],\n"
+            "    #category : #'Cycle'\n"
+            "}\n"
+            "\n"
+            "{ #category : #x }\n"
+            "Alpha >> useBeta [\n"
+            "    ^ Beta new\n"
+            "]\n"
+        )
+        (pkg_dir / "Beta.st").write_text(
+            'Class {\n'
+            "    #name : #Beta,\n"
+            "    #superclass : #Object,\n"
+            "    #instVars : [],\n"
+            "    #classVars : [],\n"
+            "    #poolDictionaries : [],\n"
+            "    #category : #'Cycle'\n"
+            "}\n"
+        )
+        (tmp_path / ".gspm" / "tonel").mkdir(parents=True, exist_ok=True)
+
+        manifest = Manifest(
+            package=PackageMetadata(name="myapp", version="1.0.0"),
+            load=LoadSpec(),
+            dependencies={
+                "cyclic": Dependency(
+                    name="cyclic", version="^1.0",
+                    git="https://example.com/cyclic",
+                    tonel=["src/Cycle"],
+                ),
+            },
+        )
+        lockfile = Lockfile(packages=[
+            ResolvedPackage(name="cyclic", version="1.0.0",
+                            source="git+https://example.com/cyclic", sha="cy001"),
+        ])
+
+        script = generate_install_script(
+            project_root=tmp_path, manifest=manifest,
+            lockfile=lockfile, stone_name="mystone",
+            use_tfile=True,
+        )
+        # Should have fallen back to .tpz, with a comment explaining why
+        assert ".tpz" in script
+        assert "TFILE skipped for Cycle" in script
+        assert "TFILE " not in script.replace("TFILE skipped", "")
+
+    def test_use_tfile_default_is_transpile(self, tmp_path):
+        """Without --tfile (default), behavior is unchanged: transpile."""
+        dep_dir = tmp_path / ".gspm" / "deps" / "regular"
+        pkg_dir = dep_dir / "src" / "Pkg"
+        pkg_dir.mkdir(parents=True)
+        (pkg_dir / "OneClass.st").write_text(
+            'Class {\n'
+            "    #name : #OneClass,\n"
+            "    #superclass : #Object,\n"
+            "    #instVars : [],\n"
+            "    #classVars : [],\n"
+            "    #poolDictionaries : [],\n"
+            "    #category : #'Pkg'\n"
+            "}\n"
+        )
+
+        manifest = Manifest(
+            package=PackageMetadata(name="myapp", version="1.0.0"),
+            load=LoadSpec(),
+            dependencies={
+                "regular": Dependency(
+                    name="regular", version="^1.0",
+                    git="https://example.com/regular",
+                    tonel=["src/Pkg"],
+                ),
+            },
+        )
+        lockfile = Lockfile(packages=[
+            ResolvedPackage(name="regular", version="1.0.0",
+                            source="git+https://example.com/regular", sha="rg001"),
+        ])
+
+        script = generate_install_script(
+            project_root=tmp_path, manifest=manifest,
+            lockfile=lockfile, stone_name="mystone",
+            # use_tfile defaults to False
+        )
+        assert ".tpz" in script
+        assert "TFILE" not in script
+
     def test_dep_auto_discover_skips_filetree_test_packages(self, tmp_path):
         """Auto-discovery skips .package dirs with test names."""
         dep_dir = tmp_path / ".gspm" / "deps" / "withft"

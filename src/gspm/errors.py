@@ -43,3 +43,7 @@ class TonelError(GspmError):
 
 class FileTreeError(GspmError):
     """Error parsing a FileTree .package directory."""
+
+
+class MczError(GspmError):
+    """Error reading or migrating a Monticello .mcz archive."""

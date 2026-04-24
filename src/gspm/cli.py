@@ -10,6 +10,17 @@ from gspm import __version__
 from gspm.errors import GspmError
 
 
+def _detect_platform() -> str:
+    """Map ``sys.platform`` to a stable platform name for conditional deps."""
+    if sys.platform.startswith("linux"):
+        return "linux"
+    if sys.platform == "darwin":
+        return "macos"
+    if sys.platform.startswith("win"):
+        return "windows"
+    return sys.platform
+
+
 @click.group()
 @click.version_option(version=__version__, prog_name="gspm")
 def main() -> None:
@@ -122,7 +133,9 @@ def add(
 
 
 @main.command()
-def fetch() -> None:
+@click.option("--gs-version", default=None,
+              help="GemStone version to activate gemstone-conditional dependencies")
+def fetch(gs_version: Optional[str]) -> None:
     """Resolve all dependencies and update gemstone.lock."""
     from gspm.manifest import load_manifest
     from gspm.lockfile import save_lockfile
@@ -140,7 +153,12 @@ def fetch() -> None:
     except GspmError as e:
         _error(str(e))
 
-    if not manifest.dependencies and not manifest.dev_dependencies:
+    has_any_deps = (
+        manifest.dependencies or manifest.dev_dependencies
+        or manifest.conditional_dependencies
+        or manifest.conditional_dev_dependencies
+    )
+    if not has_any_deps:
         click.echo("No dependencies declared.")
         return
 
@@ -149,7 +167,11 @@ def fetch() -> None:
     try:
         source = PackageSource(project_root)
         resolver = Resolver(source)
-        lockfile = resolver.resolve(manifest)
+        lockfile = resolver.resolve(
+            manifest,
+            gemstone_version=gs_version,
+            platform=_detect_platform(),
+        )
     except GspmError as e:
         _error(str(e))
 
@@ -192,12 +214,17 @@ def fetch() -> None:
 @click.option("--password", default=None, help="GemStone password (overrides config)")
 @click.option("--gs-version", default=None, help="GemStone version for conditional loading")
 @click.option("--dry-run", is_flag=True, help="Print the Topaz script without running it")
+@click.option("--tfile", "use_tfile", is_flag=True,
+              help="Load Tonel via Topaz TFILE instead of transpiling to .tpz "
+                   "(requires a stone with TFILE support; falls back to transpile "
+                   "when peer-class forward references are detected)")
 def install(
     stone: str,
     user: Optional[str],
     password: Optional[str],
     gs_version: Optional[str],
     dry_run: bool,
+    use_tfile: bool,
 ) -> None:
     """Generate and run a Topaz script to load code into STONE."""
     from gspm.manifest import load_manifest
@@ -217,6 +244,7 @@ def install(
         user=user or stone_cfg.user,
         password=password or stone_cfg.password,
         gemstone_version=gs_version,
+        use_tfile=use_tfile,
     )
 
     if dry_run:
@@ -243,12 +271,15 @@ def install(
 @click.option("--password", default=None, help="GemStone password (overrides config)")
 @click.option("--gs-version", default=None, help="GemStone version for conditional loading")
 @click.option("--dry-run", is_flag=True, help="Print the Topaz script without running it")
+@click.option("--tfile", "use_tfile", is_flag=True,
+              help="Load Tonel via Topaz TFILE instead of transpiling to .tpz")
 def test(
     stone: str,
     user: Optional[str],
     password: Optional[str],
     gs_version: Optional[str],
     dry_run: bool,
+    use_tfile: bool,
 ) -> None:
     """Load code including dev-dependencies and run tests in STONE."""
     from gspm.manifest import load_manifest
@@ -270,6 +301,7 @@ def test(
         gemstone_version=gs_version,
         include_dev=True,
         include_tests=True,
+        use_tfile=use_tfile,
     )
 
     if dry_run:
@@ -292,7 +324,9 @@ def test(
 
 @main.command()
 @click.argument("package", required=False)
-def update(package: Optional[str]) -> None:
+@click.option("--gs-version", default=None,
+              help="GemStone version to activate gemstone-conditional dependencies")
+def update(package: Optional[str], gs_version: Optional[str]) -> None:
     """Update dependencies within declared constraints."""
     from gspm.manifest import load_manifest
     from gspm.lockfile import load_lockfile, save_lockfile
@@ -315,7 +349,11 @@ def update(package: Optional[str]) -> None:
     try:
         source = PackageSource(project_root)
         resolver = Resolver(source)
-        lockfile = resolver.resolve(manifest)
+        lockfile = resolver.resolve(
+            manifest,
+            gemstone_version=gs_version,
+            platform=_detect_platform(),
+        )
     except GspmError as e:
         _error(str(e))
 
@@ -419,6 +457,38 @@ def publish() -> None:
         click.echo(f"PR: {pr_url}")
     except GspmError as e:
         _error(str(e))
+
+
+# ---------------------------------------------------------------------------
+# gspm migrate-mcz
+# ---------------------------------------------------------------------------
+
+
+@main.command(name="migrate-mcz")
+@click.argument("mcz_path", type=click.Path(exists=True, dir_okay=False))
+@click.option("--out", "out_dir", type=click.Path(),
+              help="Output directory (defaults to a sibling of the .mcz file "
+                   "named after the package)")
+def migrate_mcz_cmd(mcz_path: str, out_dir: Optional[str]) -> None:
+    """Convert a Monticello .mcz package to a gspm package directory.
+
+    Best-effort migration: the .mcz source is repackaged as Topaz file-in
+    format with Monticello stamp metadata stripped. Complex packages
+    (traits, unusual extensions) may need manual review of the output.
+    """
+    from gspm.mcz import migrate_mcz
+
+    mcz = Path(mcz_path).resolve()
+    out = Path(out_dir).resolve() if out_dir else mcz.parent / mcz.stem
+
+    try:
+        manifest_path = migrate_mcz(mcz, out)
+    except GspmError as e:
+        _error(str(e))
+
+    click.secho(f"Migrated {mcz.name} → {out}", fg="green")
+    click.echo(f"  {manifest_path}")
+    click.echo("Review gemstone.toml and the generated .gs file before use.")
 
 
 # ---------------------------------------------------------------------------

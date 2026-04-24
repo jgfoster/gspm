@@ -83,6 +83,14 @@ tonel = ["src/MyPackage"]
 magritte = { version = "^2.0", git = "https://github.com/magritte-metamodel/magritte" }
 zinc     = { version = "^1.2", git = "https://github.com/svenvc/zinc" }
 
+# Conditional dependencies — activated when the target environment matches.
+# The platform is auto-detected; the GemStone version comes from --gs-version.
+[dependencies.gemstone.">=3.7"]
+gemstone-extras = { version = "^1.0", git = "https://example.com/gs-extras" }
+
+[dependencies.platform.linux]
+linux-support = { version = "^1.0", git = "https://example.com/linux-support" }
+
 [dev-dependencies]
 sunit = { version = "^1.0", git = "https://github.com/example/sunit-gs" }
 
@@ -209,7 +217,13 @@ gspm install my_stone
 gspm install my_stone --user SystemUser --password secret
 gspm install my_stone --gs-version 3.7.0    # enables conditional loading
 gspm install my_stone --dry-run              # print script, don't run it
+gspm install my_stone --tfile                # use Topaz TFILE for Tonel
 ```
+
+Pass `--tfile` to load Tonel `.class.st` files directly via Topaz `TFILE`
+instead of transpiling them to `.tpz`. Requires a stone with TFILE
+support. gspm scans for forward references between peer classes and
+falls back to transpilation when it detects any.
 
 ### `gspm test <stone>`
 
@@ -244,6 +258,23 @@ seaside 3.5.0
 │   └── zinc 1.3.1
 └── zinc 1.3.1
 ```
+
+### `gspm migrate-mcz <mcz-path>`
+
+Best-effort one-way migration of a Monticello `.mcz` archive into a gspm
+package directory. Extracts the source, strips Monticello-specific
+metadata (`stamp:`, `commentStamp:`, `prior:`) that Topaz does not
+recognize, and writes a `gemstone.toml` plus a `.gs` file. Topaz `input`
+reads chunk-format Smalltalk natively, so no chunk-level parsing is
+performed.
+
+```bash
+gspm migrate-mcz path/to/Zinc-HTTP-sven.42.mcz
+gspm migrate-mcz path/to/pkg.mcz --out ./zinc-http
+```
+
+Review the generated `gemstone.toml` and source file before use.
+Packages with traits or unusual extensions may need manual cleanup.
 
 ### `gspm publish`
 

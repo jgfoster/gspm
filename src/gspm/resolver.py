@@ -16,7 +16,7 @@ from packaging.version import InvalidVersion, Version
 
 from gspm.errors import ResolverError
 from gspm.models import Dependency, Lockfile, Manifest, ResolvedPackage
-from gspm.manifest import expand_constraint
+from gspm.manifest import evaluate_conditional_dependencies, expand_constraint
 
 
 class PackageSource:
@@ -99,17 +99,33 @@ class Resolver:
         self._source = source
 
     def resolve(
-        self, manifest: Manifest, include_dev: bool = False
+        self,
+        manifest: Manifest,
+        include_dev: bool = False,
+        gemstone_version: Optional[str] = None,
+        platform: Optional[str] = None,
     ) -> Lockfile:
-        """Resolve all dependencies and return a Lockfile."""
+        """Resolve all dependencies and return a Lockfile.
+
+        ``gemstone_version`` and ``platform`` activate matching
+        conditional-dependency blocks. When omitted, gemstone-conditional
+        and platform-conditional blocks are skipped respectively.
+        """
         resolved: Dict[str, Tuple[Version, str, str, List[str]]] = {}
         # name -> (version, sha, git_url, [dep_names])
         constraints: Dict[str, List[SpecifierSet]] = {}
 
         # Collect root dependencies
         all_deps = dict(manifest.dependencies)
+        all_deps.update(evaluate_conditional_dependencies(
+            manifest.conditional_dependencies, gemstone_version, platform,
+        ))
         if include_dev:
             all_deps.update(manifest.dev_dependencies)
+            all_deps.update(evaluate_conditional_dependencies(
+                manifest.conditional_dev_dependencies,
+                gemstone_version, platform,
+            ))
 
         # Resolve each dependency
         for name, dep in all_deps.items():

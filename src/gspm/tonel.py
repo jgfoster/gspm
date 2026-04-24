@@ -8,9 +8,12 @@ import re
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from gspm.errors import TonelError
+
+
+_CLASS_NAME_RE = re.compile(r"\b([A-Z][A-Za-z0-9_]*)\b")
 
 
 # ---------------------------------------------------------------------------
@@ -588,6 +591,65 @@ def determine_load_order(classes: List[TonelClass]) -> List[TonelClass]:
     return result
 
 
+def parse_and_order_tonel(src_dir: Path) -> List[Tuple[Path, TonelClass]]:
+    """Parse all .st files in src_dir and return (path, class) pairs in load order.
+
+    Used by both transpilation and the TFILE-based loading path.
+    """
+    st_files = discover_tonel_files(src_dir)
+    if not st_files:
+        return []
+
+    parsed: List[Tuple[Path, TonelClass]] = []
+    for st_file in st_files:
+        try:
+            content = st_file.read_text()
+            tonel = parse_tonel(content)
+            parsed.append((st_file, tonel))
+        except TonelError:
+            raise
+        except Exception as e:
+            raise TonelError(f"Failed to parse {st_file.name}: {e}") from e
+
+    classes = [tc for _, tc in parsed]
+    ordered_classes = determine_load_order(classes)
+
+    cls_to_path = {id(tc): p for p, tc in parsed}
+    return [(cls_to_path[id(tc)], tc) for tc in ordered_classes]
+
+
+def has_forward_class_refs(ordered: List[Tuple[Path, TonelClass]]) -> bool:
+    """Detect whether any class's methods textually reference a peer not yet loaded.
+
+    TFILE loads files one at a time in load order; each file's class
+    definition runs before its method bodies. So a method body can
+    safely reference any class defined in a previously TFILE'd file or
+    in the current file. A reference to a peer class that comes later
+    in the load order would fail to compile under TFILE.
+
+    A False result means TFILE is safe; True means transpilation
+    (which uses two-phase loading) is required. The check is textual
+    and may produce false positives (names mentioned in comments or
+    strings) — those force the safe fallback.
+    """
+    if len(ordered) < 2:
+        return False
+
+    local_class_names = {tc.name for _, tc in ordered if not tc.is_extension}
+    if not local_class_names:
+        return False
+
+    defined: Set[str] = set()
+    for _path, tc in ordered:
+        if not tc.is_extension:
+            defined.add(tc.name)
+        for method in tc.methods:
+            for ref in _CLASS_NAME_RE.findall(method.source):
+                if ref in local_class_names and ref not in defined:
+                    return True
+    return False
+
+
 def transpile_directory(src_dir: Path, dest_dir: Path) -> List[Path]:
     """Parse all .st files in src_dir, generate a single combined .tpz in dest_dir.
 
@@ -596,30 +658,13 @@ def transpile_directory(src_dir: Path, dest_dir: Path) -> List[Path]:
     all methods.  Returns a single-element list with the path to the
     generated .tpz file.
     """
-    st_files = discover_tonel_files(src_dir)
-    if not st_files:
+    ordered = parse_and_order_tonel(src_dir)
+    if not ordered:
         return []
 
     dest_dir.mkdir(parents=True, exist_ok=True)
-
-    # Parse all files
-    parsed: List[TonelClass] = []
-    for st_file in st_files:
-        try:
-            content = st_file.read_text()
-            tonel = parse_tonel(content)
-            parsed.append(tonel)
-        except TonelError:
-            raise
-        except Exception as e:
-            raise TonelError(f"Failed to parse {st_file.name}: {e}") from e
-
-    # Determine load order
-    ordered = determine_load_order(parsed)
-
-    # Generate a single combined .tpz with all defs first, then all methods
     tpz_path = dest_dir / f"{src_dir.name}.tpz"
-    tpz_content = generate_combined_tpz(ordered)
+    tpz_content = generate_combined_tpz([tc for _, tc in ordered])
     tpz_path.write_text(tpz_content)
 
     return [tpz_path]

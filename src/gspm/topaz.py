@@ -15,7 +15,12 @@ from gspm.errors import TopazError
 from gspm.manifest import load_manifest
 from gspm.models import Lockfile, Manifest, ResolvedPackage
 from gspm.cache import get_dep_path, tonel_output_path
-from gspm.tonel import transpile_directory
+from gspm.errors import TonelError
+from gspm.tonel import (
+    has_forward_class_refs,
+    parse_and_order_tonel,
+    transpile_directory,
+)
 from gspm.filetree import transpile_filetree_package, discover_filetree_packages
 
 
@@ -29,6 +34,7 @@ def generate_install_script(
     gemstone_version: Optional[str] = None,
     include_dev: bool = False,
     include_tests: bool = False,
+    use_tfile: bool = False,
 ) -> str:
     """Generate a complete Topaz load script."""
     lines: List[str] = []
@@ -68,9 +74,7 @@ def generate_install_script(
                 src_dir = dep_path / tonel_dir
                 if src_dir.is_dir():
                     dest_dir = tonel_output_path(project_root, pkg.name)
-                    tpz_files = transpile_directory(src_dir, dest_dir)
-                    for tpz in tpz_files:
-                        lines.append(f"input {tpz}")
+                    _emit_tonel_dir(src_dir, dest_dir, use_tfile, lines)
 
             for ft_pkg in dep_manifest.load.filetree:
                 pkg_dir = dep_path / ft_pkg
@@ -97,9 +101,7 @@ def generate_install_script(
                 src_dir = dep_path / tonel_dir
                 if src_dir.is_dir():
                     dest_dir = tonel_output_path(project_root, pkg.name)
-                    tpz_files = transpile_directory(src_dir, dest_dir)
-                    for tpz in tpz_files:
-                        lines.append(f"input {tpz}")
+                    _emit_tonel_dir(src_dir, dest_dir, use_tfile, lines)
 
             for ft_pkg in dep_decl.filetree:
                 pkg_dir = dep_path / ft_pkg
@@ -111,7 +113,9 @@ def generate_install_script(
 
         else:
             # No manifest, no overrides — auto-discover
-            _auto_discover_and_load(dep_path, project_root, pkg.name, lines)
+            _auto_discover_and_load(
+                dep_path, project_root, pkg.name, lines, use_tfile
+            )
 
         lines.append("")
 
@@ -125,9 +129,7 @@ def generate_install_script(
         src_dir = project_root / tonel_dir
         if src_dir.is_dir():
             dest_dir = tonel_output_path(project_root, manifest.package.name)
-            tpz_files = transpile_directory(src_dir, dest_dir)
-            for tpz in tpz_files:
-                lines.append(f"input {tpz}")
+            _emit_tonel_dir(src_dir, dest_dir, use_tfile, lines)
 
     # Transpile and load project's FileTree packages
     for ft_pkg in manifest.load.filetree:
@@ -272,6 +274,42 @@ def run_topaz(script_content: str, project_root: Path) -> str:
         return result.stdout
 
 
+def _emit_tonel_dir(
+    src_dir: Path,
+    dest_dir: Path,
+    use_tfile: bool,
+    lines: List[str],
+) -> None:
+    """Emit Topaz directives to load a Tonel directory.
+
+    With ``use_tfile=True``, parses the directory and — if no peer-class
+    forward references are detected — emits one ``TFILE`` directive per
+    .st file in inheritance order. If forward references are present
+    (or parsing fails), falls back to transpiling to a single combined
+    .tpz and emitting an ``input`` directive.
+
+    With ``use_tfile=False`` (the default), always transpiles.
+    """
+    if use_tfile:
+        try:
+            ordered = parse_and_order_tonel(src_dir)
+        except TonelError:
+            ordered = []
+        if ordered and not has_forward_class_refs(ordered):
+            for path, _tc in ordered:
+                lines.append(f"TFILE {path}")
+            return
+        if ordered:
+            lines.append(
+                f"! TFILE skipped for {src_dir.name}: forward refs detected, "
+                "using transpiled .tpz fallback"
+            )
+
+    tpz_files = transpile_directory(src_dir, dest_dir)
+    for tpz in tpz_files:
+        lines.append(f"input {tpz}")
+
+
 def _try_load_dep_manifest(dep_path: Path) -> Optional[Manifest]:
     """Try to load a dependency's gemstone.toml. Returns None if not found."""
     manifest_path = dep_path / "gemstone.toml"
@@ -288,6 +326,7 @@ def _auto_discover_and_load(
     project_root: Path,
     pkg_name: str,
     lines: List[str],
+    use_tfile: bool = False,
 ) -> None:
     """Auto-discover loadable files when a dependency has no manifest and no overrides.
 
@@ -308,9 +347,7 @@ def _auto_discover_and_load(
         found_any = True
         for src_dir in tonel_dirs:
             dest_dir = tonel_output_path(project_root, pkg_name)
-            tpz_files = transpile_directory(src_dir, dest_dir)
-            for tpz in tpz_files:
-                lines.append(f"input {tpz}")
+            _emit_tonel_dir(src_dir, dest_dir, use_tfile, lines)
 
     # Discover FileTree packages (.package/ dirs)
     ft_pkgs = discover_filetree_packages(dep_path)
